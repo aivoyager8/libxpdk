@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sched.h>
+#include <pthread.h>
 #include <spdk/env.h>
 #include <spdk/event.h>
 #include <spdk/thread.h>

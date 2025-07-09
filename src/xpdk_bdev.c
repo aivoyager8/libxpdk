@@ -133,10 +133,7 @@ xpdk_spdk_handle_open(struct xpdk_msg *msg)
     // Since we got the desc immediately, complete the operation
     msg->status = XPDK_SUCCESS;
     msg->completed = true;
-        return;
-    }
-    
-    /* bdev_open_complete will set msg->completed = true */
+    return;
 }
 
 /* Handle close request in SPDK thread */
