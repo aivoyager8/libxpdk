@@ -19,8 +19,23 @@ set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
 # Find required packages
 find_package(PkgConfig REQUIRED)
 
-# Find SPDK
-pkg_check_modules(SPDK REQUIRED spdk_bdev spdk_env_dpdk spdk_thread spdk_util)
+# Find SPDK - include more comprehensive library list
+pkg_check_modules(SPDK REQUIRED 
+    spdk_bdev 
+    spdk_env_dpdk 
+    spdk_thread 
+    spdk_util
+    spdk_trace
+    spdk_log
+    spdk_json
+    spdk_jsonrpc
+    spdk_rpc
+    spdk_conf
+    spdk_notify
+    spdk_dma
+    spdk_syslibs
+    spdk_dpdklibs
+)
 
 # Find additional required libraries for SPDK
 find_package(PkgConfig REQUIRED)
@@ -29,6 +44,9 @@ find_library(SSL_LIB ssl)
 find_library(CRYPTO_LIB crypto)
 find_library(ISAL_LIB isal)
 find_library(ISAL_CRYPTO_LIB isal_crypto)
+find_library(NUMA_LIB numa)
+find_library(DL_LIB dl)
+find_library(PTHREAD_LIB pthread)
 
 # Combine all libraries
 set(ALL_LIBRARIES ${SPDK_LIBRARIES} ${UUID_LIBRARIES})
@@ -43,6 +61,15 @@ if(ISAL_LIB)
 endif()
 if(ISAL_CRYPTO_LIB)
     list(APPEND ALL_LIBRARIES ${ISAL_CRYPTO_LIB})
+endif()
+if(NUMA_LIB)
+    list(APPEND ALL_LIBRARIES ${NUMA_LIB})
+endif()
+if(DL_LIB)
+    list(APPEND ALL_LIBRARIES ${DL_LIB})
+endif()
+if(PTHREAD_LIB)
+    list(APPEND ALL_LIBRARIES ${PTHREAD_LIB})
 endif()
 
 # Include directories
