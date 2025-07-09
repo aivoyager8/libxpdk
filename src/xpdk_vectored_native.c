@@ -349,10 +349,11 @@ ssize_t xpdk_readv(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint6
     msg.io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_msg_send(&msg);
+    int rc = xpdk_msg_send_sync(&msg);
     
-    /* Wait for completion */
-    xpdk_msg_wait(&msg);
+    if (rc != XPDK_SUCCESS) {
+        return rc;
+    }
     
     if (msg.status == XPDK_SUCCESS) {
         return msg.io.bytes_transferred;
@@ -388,10 +389,11 @@ ssize_t xpdk_writev(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint
     msg.io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_msg_send(&msg);
+    int rc = xpdk_msg_send_sync(&msg);
     
-    /* Wait for completion */
-    xpdk_msg_wait(&msg);
+    if (rc != XPDK_SUCCESS) {
+        return rc;
+    }
     
     if (msg.status == XPDK_SUCCESS) {
         return msg.io.bytes_transferred;
@@ -432,9 +434,7 @@ int xpdk_readv_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uin
     msg->io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_msg_send(msg);
-    
-    return XPDK_SUCCESS;
+    return xpdk_msg_send_async(msg);
 }
 
 /* Asynchronous vectored write operation */
@@ -469,7 +469,5 @@ int xpdk_writev_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, ui
     msg->io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_msg_send(msg);
-    
-    return XPDK_SUCCESS;
+    return xpdk_msg_send_async(msg);
 }

@@ -22,9 +22,33 @@ find_package(PkgConfig REQUIRED)
 # Find SPDK
 pkg_check_modules(SPDK REQUIRED spdk_bdev spdk_env_dpdk spdk_thread spdk_util)
 
+# Find additional required libraries for SPDK
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(UUID REQUIRED uuid)
+find_library(SSL_LIB ssl)
+find_library(CRYPTO_LIB crypto)
+find_library(ISAL_LIB isal)
+find_library(ISAL_CRYPTO_LIB isal_crypto)
+
+# Combine all libraries
+set(ALL_LIBRARIES ${SPDK_LIBRARIES} ${UUID_LIBRARIES})
+if(SSL_LIB)
+    list(APPEND ALL_LIBRARIES ${SSL_LIB})
+endif()
+if(CRYPTO_LIB)
+    list(APPEND ALL_LIBRARIES ${CRYPTO_LIB})
+endif()
+if(ISAL_LIB)
+    list(APPEND ALL_LIBRARIES ${ISAL_LIB})
+endif()
+if(ISAL_CRYPTO_LIB)
+    list(APPEND ALL_LIBRARIES ${ISAL_CRYPTO_LIB})
+endif()
+
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${SPDK_INCLUDE_DIRS})
+include_directories(${UUID_INCLUDE_DIRS})
 
 # Library source files - explicitly exclude SPDK subdirectory and non-native vectored implementation
 file(GLOB LIBXPDK_SOURCES 
@@ -39,12 +63,12 @@ list(FILTER LIBXPDK_SOURCES EXCLUDE REGEX "src/xpdk_vectored.c")
 add_library(xpdk STATIC ${LIBXPDK_SOURCES})
 
 # Link libraries
-target_link_libraries(xpdk ${SPDK_LIBRARIES})
+target_link_libraries(xpdk ${ALL_LIBRARIES})
 
 # Create shared library
 add_library(xpdk_shared SHARED ${LIBXPDK_SOURCES})
 set_target_properties(xpdk_shared PROPERTIES OUTPUT_NAME xpdk)
-target_link_libraries(xpdk_shared ${SPDK_LIBRARIES})
+target_link_libraries(xpdk_shared ${ALL_LIBRARIES})
 
 # Install targets
 install(TARGETS xpdk xpdk_shared
