@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
+#include <fcntl.h>
 #include "xpdk.h"
 
 int main(void)
@@ -11,6 +12,7 @@ int main(void)
     /* Test initialization */
     printf("Test 1: Library initialization... ");
     rc = xpdk_init(NULL);
+    (void)rc; /* suppress unused warning after assert in release mode */
     assert(rc == XPDK_SUCCESS || rc == XPDK_ERROR_IO);  /* May fail if no SPDK config */
     printf("PASS\n");
     
@@ -30,6 +32,7 @@ int main(void)
     /* Test invalid operations */
     printf("Test 4: Invalid operations... ");
     xpdk_fd_t invalid_fd = xpdk_open("nonexistent_device", O_RDONLY);
+    (void)invalid_fd; /* suppress unused warning after assert in release mode */
     assert(invalid_fd < 0);  /* Should fail */
     printf("PASS\n");
     

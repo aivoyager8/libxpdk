@@ -293,6 +293,9 @@ example_performance_comparison(void)
 int
 main(int argc, char **argv)
 {
+    (void)argc; /* unused parameter */
+    (void)argv; /* unused parameter */
+    
     printf("XPDK Advanced Open Mechanism Examples\n");
     printf("=====================================\n\n");
 
