@@ -25,8 +25,9 @@ target_link_libraries(qos_example xpdk ${ALL_LIBRARIES})
 add_executable(vectored_example vectored_example.c)
 target_link_libraries(vectored_example xpdk ${ALL_LIBRARIES})
 
-add_executable(advanced_benchmark advanced_benchmark.c)
-target_link_libraries(advanced_benchmark xpdk ${ALL_LIBRARIES})
+# advanced_benchmark has missing APIs - disabled for now
+# add_executable(advanced_benchmark advanced_benchmark.c)
+# target_link_libraries(advanced_benchmark xpdk ${ALL_LIBRARIES})
 
 # Advanced open example (if enabled)
 if(ENABLE_ADVANCED_OPEN)
