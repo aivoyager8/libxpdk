@@ -19,22 +19,12 @@ set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
 # Find required packages
 find_package(PkgConfig REQUIRED)
 
-# Find SPDK - include more comprehensive library list
+# Find SPDK - use core libraries with proper dependency order
 pkg_check_modules(SPDK REQUIRED 
     spdk_bdev 
     spdk_env_dpdk 
     spdk_thread 
     spdk_util
-    spdk_trace
-    spdk_log
-    spdk_json
-    spdk_jsonrpc
-    spdk_rpc
-    spdk_conf
-    spdk_notify
-    spdk_dma
-    spdk_syslibs
-    spdk_dpdklibs
 )
 
 # Find additional required libraries for SPDK
@@ -48,8 +38,10 @@ find_library(NUMA_LIB numa)
 find_library(DL_LIB dl)
 find_library(PTHREAD_LIB pthread)
 
-# Combine all libraries
-set(ALL_LIBRARIES ${SPDK_LIBRARIES} ${UUID_LIBRARIES})
+# Combine all libraries with proper order for static linking
+# Put spdk_env_dpdk first as it provides symbols needed by other libraries
+find_library(SPDK_ENV_DPDK_LIB spdk_env_dpdk)
+set(ALL_LIBRARIES ${SPDK_ENV_DPDK_LIB} ${SPDK_LIBRARIES} ${UUID_LIBRARIES})
 if(SSL_LIB)
     list(APPEND ALL_LIBRARIES ${SSL_LIB})
 endif()
