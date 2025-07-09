@@ -56,11 +56,15 @@ xpdk_spdk_handle_list_bdevs(struct xpdk_msg *msg)
 static void
 bdev_event_cb(enum spdk_bdev_event_type type, struct spdk_bdev *bdev, void *event_ctx)
 {
+    (void)type;      /* unused parameter */
+    (void)bdev;      /* unused parameter */
+    (void)event_ctx; /* unused parameter */
+    
     /* Handle bdev events like removal */
     // For now, we'll just log and continue
 }
 
-static void
+static void __attribute__((unused))
 bdev_open_complete(struct spdk_bdev_desc *desc, int status, void *cb_arg)
 {
     struct xpdk_msg *msg = (struct xpdk_msg *)cb_arg;

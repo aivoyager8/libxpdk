@@ -7,6 +7,9 @@
 
 int main(int argc, char *argv[])
 {
+    (void)argc; /* unused parameter */
+    (void)argv; /* unused parameter */
+    
     struct xpdk_opts opts;
     struct xpdk_bdev_info devices[16];
     xpdk_fd_t fd;

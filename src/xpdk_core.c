@@ -76,6 +76,8 @@ xpdk_print_performance_stats(void)
 int
 xpdk_msg_process_poller(void *arg)
 {
+    (void)arg; /* unused parameter */
+    
     struct xpdk_msg *msg;
     size_t count;
     int processed = 0;
@@ -164,6 +166,8 @@ xpdk_msg_process_poller(void *arg)
 void *
 xpdk_spdk_thread_main(void *arg)
 {
+    (void)arg; /* unused parameter */
+    
     struct spdk_thread *thread;
     uint64_t poll_period_us;
     
