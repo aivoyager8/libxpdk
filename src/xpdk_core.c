@@ -7,7 +7,8 @@
 #include <spdk/env.h>
 #include <spdk/event.h>
 #include <spdk/thread.h>
-#include <spdk/ring.h>
+// Note: spdk/ring.h is not available in this SPDK version
+// We'll implement ring functionality using other SPDK APIs
 
 /* Global context */
 struct xpdk_context g_xpdk_ctx = {0};

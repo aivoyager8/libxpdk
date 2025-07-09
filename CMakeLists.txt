@@ -26,8 +26,13 @@ pkg_check_modules(SPDK REQUIRED spdk_bdev spdk_env_dpdk spdk_thread spdk_util)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${SPDK_INCLUDE_DIRS})
 
-# Library source files
-file(GLOB_RECURSE LIBXPDK_SOURCES "src/*.c")
+# Library source files - explicitly exclude SPDK subdirectory
+file(GLOB LIBXPDK_SOURCES 
+    "src/xpdk_*.c"
+)
+
+# Remove any SPDK subdirectory files if they got included
+list(FILTER LIBXPDK_SOURCES EXCLUDE REGEX "src/spdk/.*")
 
 # Create static library
 add_library(xpdk STATIC ${LIBXPDK_SOURCES})

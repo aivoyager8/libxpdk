@@ -11,13 +11,13 @@ struct bdev_list_ctx {
     int count;
 };
 
-static void
-bdev_list_iter(struct spdk_bdev *bdev, void *ctx)
+static int
+bdev_list_iter(void *ctx, struct spdk_bdev *bdev)
 {
     struct bdev_list_ctx *list_ctx = (struct bdev_list_ctx *)ctx;
     
     if (list_ctx->count >= list_ctx->max_devices) {
-        return;
+        return 0;  // Continue iteration
     }
 
     struct xpdk_bdev_info *info = &list_ctx->devices[list_ctx->count];
@@ -32,6 +32,7 @@ bdev_list_iter(struct spdk_bdev *bdev, void *ctx)
     info->capacity = info->block_size * info->num_blocks;
     
     list_ctx->count++;
+    return 0;  // Continue iteration
 }
 
 /* Handle list bdevs request in SPDK thread */
@@ -50,6 +51,13 @@ xpdk_spdk_handle_list_bdevs(struct xpdk_msg *msg)
     msg->list.count = ctx.count;
     msg->status = XPDK_SUCCESS;
     msg->completed = true;
+}
+
+static void
+bdev_event_cb(enum spdk_bdev_event_type type, struct spdk_bdev *bdev, void *event_ctx)
+{
+    /* Handle bdev events like removal */
+    // For now, we'll just log and continue
 }
 
 static void
@@ -111,12 +119,20 @@ xpdk_spdk_handle_open(struct xpdk_msg *msg)
 
     /* Open the device asynchronously */
     bool write_access = (msg->open.flags & O_RDWR) || (msg->open.flags & O_WRONLY);
+    
+    // Use spdk_bdev_open which is simpler API
     int rc = spdk_bdev_open_ext(msg->open.bdev_name, write_access, 
-                               bdev_open_complete, msg, NULL);
+                               bdev_event_cb, msg, &dev->desc);
     if (rc != 0) {
         xpdk_put_device(dev);
         msg->status = XPDK_ERROR_IO;
         msg->completed = true;
+        return;
+    }
+    
+    // Since we got the desc immediately, complete the operation
+    msg->status = XPDK_SUCCESS;
+    msg->completed = true;
         return;
     }
     
