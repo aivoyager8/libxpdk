@@ -90,7 +90,7 @@ xpdk_msg_process_poller(void *arg)
         processed++;
         g_xpdk_ctx.total_messages_processed++;
         
-        /* Process message based on type */
+        /* Process message based on type - optimized for high performance */
         switch (msg->type) {
         case XPDK_MSG_OPEN:
             xpdk_spdk_handle_open(msg);
@@ -100,13 +100,20 @@ xpdk_msg_process_poller(void *arg)
             break;
         case XPDK_MSG_READ:
         case XPDK_MSG_WRITE:
-        case XPDK_MSG_READV:
-        case XPDK_MSG_WRITEV:
             g_xpdk_ctx.total_io_operations++;
-            if (msg->type == XPDK_MSG_READ || msg->type == XPDK_MSG_READV) {
+            if (msg->type == XPDK_MSG_READ) {
                 xpdk_spdk_handle_read(msg);
             } else {
                 xpdk_spdk_handle_write(msg);
+            }
+            break;
+        case XPDK_MSG_READV_NATIVE:
+        case XPDK_MSG_WRITEV_NATIVE:
+            g_xpdk_ctx.total_io_operations++;
+            if (msg->type == XPDK_MSG_READV_NATIVE) {
+                xpdk_spdk_handle_readv_native(msg);
+            } else {
+                xpdk_spdk_handle_writev_native(msg);
             }
             break;
         case XPDK_MSG_FLUSH:
@@ -408,6 +415,9 @@ xpdk_cleanup(void)
 
     /* Cleanup SPDK thread */
     xpdk_cleanup_spdk_thread();
+
+    /* Cleanup advanced open mechanism */
+    xpdk_advanced_cleanup();
 
     /* Cleanup synchronization */
     pthread_cond_destroy(&g_xpdk_ctx.sync_cond);

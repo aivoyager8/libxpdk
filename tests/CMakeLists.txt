@@ -16,21 +16,32 @@ target_link_libraries(test_async xpdk ${SPDK_LIBRARIES})
 add_executable(test_qos test_qos.c)
 target_link_libraries(test_qos xpdk ${SPDK_LIBRARIES})
 
-add_executable(test_batch test_batch.c)
-target_link_libraries(test_batch xpdk ${SPDK_LIBRARIES})
-
 add_executable(test_integration test_integration.c)
 target_link_libraries(test_integration xpdk ${SPDK_LIBRARIES})
+
+# Advanced open test (if enabled)
+if(ENABLE_ADVANCED_OPEN)
+    add_executable(test_advanced_open test_advanced_open.c)
+    target_link_libraries(test_advanced_open xpdk ${SPDK_LIBRARIES})
+    
+    # Add advanced open test
+    add_test(NAME advanced_open_functionality COMMAND test_advanced_open)
+endif()
 
 # Add tests
 add_test(NAME basic_functionality COMMAND test_basic)
 add_test(NAME io_operations COMMAND test_io)
 add_test(NAME async_operations COMMAND test_async)
 add_test(NAME qos_functionality COMMAND test_qos)
-add_test(NAME batch_operations COMMAND test_batch)
 add_test(NAME integration_test COMMAND test_integration)
 
 # Install tests
-install(TARGETS test_basic test_io test_async test_qos test_batch test_integration
+set(TEST_TARGETS test_basic test_io test_async test_qos test_integration)
+
+if(ENABLE_ADVANCED_OPEN)
+    list(APPEND TEST_TARGETS test_advanced_open)
+endif()
+
+install(TARGETS ${TEST_TARGETS}
     RUNTIME DESTINATION bin/tests
 )

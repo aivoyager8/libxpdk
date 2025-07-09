@@ -58,7 +58,7 @@ int rc = xpdk_init_opts(&opts);
 - **Busy Polling**: Zero-latency message processing
 - **CPU Binding**: Dedicated CPU core for consistent performance
 - **Larger Buffers**: Increased ring and pool sizes
-- **Batch Processing**: Process multiple messages per poll cycle
+- **Message Processing**: Process multiple messages per poll cycle
 
 **When to Use Turbo Mode:**
 - ✅ Latency-sensitive applications
@@ -98,13 +98,6 @@ int xpdk_writev_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, ui
 // Advanced I/O operations
 int xpdk_trim(xpdk_fd_t fd, uint64_t offset, uint64_t length);
 int xpdk_write_zeros(xpdk_fd_t fd, uint64_t offset, uint64_t length);
-
-// Batch I/O operations
-struct xpdk_batch_ctx *xpdk_batch_init(int max_ios);
-void xpdk_batch_cleanup(struct xpdk_batch_ctx *ctx);
-int xpdk_batch_submit(struct xpdk_batch_ctx *ctx, struct xpdk_batch_io *ios, int count,
-                      xpdk_io_callback_t callback);
-int xpdk_batch_submit_one(struct xpdk_batch_ctx *ctx, const struct xpdk_batch_io *io);
 
 // Buffer management
 void *xpdk_alloc_buffer(size_t size);

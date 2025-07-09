@@ -50,6 +50,13 @@ install(TARGETS xpdk xpdk_shared
 # Install headers
 install(DIRECTORY include/ DESTINATION include)
 
+# Advanced open functionality
+option(ENABLE_ADVANCED_OPEN "Enable advanced open mechanism" ON)
+if(ENABLE_ADVANCED_OPEN)
+    target_compile_definitions(xpdk PRIVATE XPDK_ENABLE_ADVANCED_OPEN)
+    target_compile_definitions(xpdk_shared PRIVATE XPDK_ENABLE_ADVANCED_OPEN)
+endif()
+
 # Examples
 option(BUILD_EXAMPLES "Build example programs" ON)
 if(BUILD_EXAMPLES)
