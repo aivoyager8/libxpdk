@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libxpdk
+Description: POSIX-like interface for SPDK block devices
+Version: @PROJECT_VERSION@
+URL: https://github.com/yourusername/libxpdk
+Requires: spdk_bdev spdk_env_dpdk spdk_thread spdk_util
+Libs: -L${libdir} -lxpdk
+Cflags: -I${includedir}

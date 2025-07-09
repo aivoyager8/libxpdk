@@ -1,0 +1,50 @@
+# Build directories
+build/
+install/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled objects
+*.o
+*.lo
+*.so
+*.so.*
+*.a
+*.la
+
+# Executables
+examples/simple_example
+examples/async_example
+examples/list_devices
+tests/test_basic
+tests/test_io
+tests/test_async
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Package files
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# Logs
+*.log
+
+# Core dumps
+core
+core.*
+
+# OS specific
+.DS_Store
+Thumbs.db
