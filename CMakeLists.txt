@@ -39,11 +39,8 @@ find_library(DL_LIB dl)
 find_library(PTHREAD_LIB pthread)
 
 # Combine all libraries with proper order for static linking
-# Put spdk_env_dpdk first as it provides symbols needed by other libraries
-find_library(SPDK_ENV_DPDK_LIB spdk_env_dpdk)
-# Remove spdk_env_dpdk from SPDK_LIBRARIES to avoid duplication
-string(REPLACE "-lspdk_env_dpdk" "" SPDK_LIBRARIES_CLEAN "${SPDK_LIBRARIES}")
-set(ALL_LIBRARIES ${SPDK_ENV_DPDK_LIB} ${SPDK_LIBRARIES_CLEAN} ${UUID_LIBRARIES})
+# Use --start-group/--end-group to resolve circular dependencies in static libraries
+set(ALL_LIBRARIES -Wl,--start-group ${SPDK_LIBRARIES} ${UUID_LIBRARIES} -Wl,--end-group)
 if(SSL_LIB)
     list(APPEND ALL_LIBRARIES ${SSL_LIB})
 endif()
