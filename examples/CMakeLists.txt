@@ -42,6 +42,6 @@ endif()
 
 # Install examples
 install(TARGETS simple_example async_example list_devices turbo_example turbo_benchmark 
-        qos_example vectored_example advanced_benchmark
+        qos_example vectored_example
     RUNTIME DESTINATION bin/examples
 )
