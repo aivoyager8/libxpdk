@@ -76,7 +76,7 @@ static void vectored_read_completion_cb(struct spdk_bdev_io *bdev_io, bool succe
         msg->status = XPDK_SUCCESS;
         // Note: Use the original bytes_transferred from the request
         // as SPDK API for getting transferred bytes from bdev_io is not available
-        msg->io.bytes_transferred = msg->io.len;
+        msg->io.bytes_transferred = msg->io.count;  // count stores total bytes for vectored IO
         
         /* Update performance statistics */
         struct xpdk_device *dev = xpdk_get_device(msg->io.fd);
@@ -123,7 +123,7 @@ static void vectored_write_completion_cb(struct spdk_bdev_io *bdev_io, bool succ
         msg->status = XPDK_SUCCESS;
         // Note: Use the original bytes_transferred from the request
         // as SPDK API for getting transferred bytes from bdev_io is not available
-        msg->io.bytes_transferred = msg->io.len;
+        msg->io.bytes_transferred = msg->io.count;  // count stores total bytes for vectored IO
         
         /* Update performance statistics */
         struct xpdk_device *dev = xpdk_get_device(msg->io.fd);
@@ -334,20 +334,22 @@ ssize_t xpdk_readv(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint6
     }
 
     struct xpdk_msg msg;
-    xpdk_msg_init(&msg, XPDK_MSG_READV_NATIVE, fd);
+    memset(&msg, 0, sizeof(msg));
+    msg.type = XPDK_MSG_READV_NATIVE;
+    msg.io.fd = fd;
     msg.io.offset = offset;
-    msg.io.iov = (struct xpdk_iovec *)iov;
-    msg.io.iovcnt = iovcnt;
+    msg.io.buffer = (void *)iov;  // Store iovec array in buffer field
+    msg.io.count = iovcnt;        // Store iovec count in count field
     
-    /* Calculate total size */
+    /* Calculate total size and store in spdk_ctx (reuse as temp storage) */
     size_t total_size = 0;
     for (int i = 0; i < iovcnt; i++) {
         total_size += iov[i].iov_len;
     }
-    msg.io.len = total_size;
+    msg.io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_send_msg(&msg);
+    xpdk_msg_send(&msg);
     
     /* Wait for completion */
     xpdk_msg_wait(&msg);
@@ -371,20 +373,22 @@ ssize_t xpdk_writev(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint
     }
 
     struct xpdk_msg msg;
-    xpdk_msg_init(&msg, XPDK_MSG_WRITEV_NATIVE, fd);
+    memset(&msg, 0, sizeof(msg));
+    msg.type = XPDK_MSG_WRITEV_NATIVE;
+    msg.io.fd = fd;
     msg.io.offset = offset;
-    msg.io.iov = (struct xpdk_iovec *)iov;
-    msg.io.iovcnt = iovcnt;
+    msg.io.buffer = (void *)iov;  // Store iovec array in buffer field
+    msg.io.count = iovcnt;        // Store iovec count in count field
     
-    /* Calculate total size */
+    /* Calculate total size and store in spdk_ctx (reuse as temp storage) */
     size_t total_size = 0;
     for (int i = 0; i < iovcnt; i++) {
         total_size += iov[i].iov_len;
     }
-    msg.io.len = total_size;
+    msg.io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_send_msg(&msg);
+    xpdk_msg_send(&msg);
     
     /* Wait for completion */
     xpdk_msg_wait(&msg);
@@ -408,27 +412,27 @@ int xpdk_readv_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uin
         return XPDK_ERROR_INVALID;
     }
 
-    struct xpdk_msg *msg = xpdk_msg_alloc();
+    struct xpdk_msg *msg = xpdk_msg_alloc(XPDK_MSG_READV_NATIVE);
     if (!msg) {
         return XPDK_ERROR_NOMEM;
     }
 
-    xpdk_msg_init(msg, XPDK_MSG_READV_NATIVE, fd);
+    msg->io.fd = fd;
     msg->io.offset = offset;
-    msg->io.iov = (struct xpdk_iovec *)iov;
-    msg->io.iovcnt = iovcnt;
+    msg->io.buffer = (void *)iov;  // Store iovec array in buffer field
+    msg->io.count = iovcnt;        // Store iovec count in count field
     msg->io.callback = callback;
-    msg->io.ctx = ctx;
+    msg->io.user_ctx = ctx;
     
-    /* Calculate total size */
+    /* Calculate total size and store in spdk_ctx (reuse as temp storage) */
     size_t total_size = 0;
     for (int i = 0; i < iovcnt; i++) {
         total_size += iov[i].iov_len;
     }
-    msg->io.len = total_size;
+    msg->io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_send_msg(msg);
+    xpdk_msg_send(msg);
     
     return XPDK_SUCCESS;
 }
@@ -445,27 +449,27 @@ int xpdk_writev_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, ui
         return XPDK_ERROR_INVALID;
     }
 
-    struct xpdk_msg *msg = xpdk_msg_alloc();
+    struct xpdk_msg *msg = xpdk_msg_alloc(XPDK_MSG_WRITEV_NATIVE);
     if (!msg) {
         return XPDK_ERROR_NOMEM;
     }
 
-    xpdk_msg_init(msg, XPDK_MSG_WRITEV_NATIVE, fd);
+    msg->io.fd = fd;
     msg->io.offset = offset;
-    msg->io.iov = (struct xpdk_iovec *)iov;
-    msg->io.iovcnt = iovcnt;
+    msg->io.buffer = (void *)iov;  // Store iovec array in buffer field
+    msg->io.count = iovcnt;        // Store iovec count in count field
     msg->io.callback = callback;
-    msg->io.ctx = ctx;
+    msg->io.user_ctx = ctx;
     
-    /* Calculate total size */
+    /* Calculate total size and store in spdk_ctx (reuse as temp storage) */
     size_t total_size = 0;
     for (int i = 0; i < iovcnt; i++) {
         total_size += iov[i].iov_len;
     }
-    msg->io.len = total_size;
+    msg->io.spdk_ctx = (void *)total_size;  // Store total size temporarily
     
     /* Send to SPDK thread */
-    xpdk_send_msg(msg);
+    xpdk_msg_send(msg);
     
     return XPDK_SUCCESS;
 }
