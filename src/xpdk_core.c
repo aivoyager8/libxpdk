@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "xpdk_internal.h"
 #include <string.h>
 #include <errno.h>

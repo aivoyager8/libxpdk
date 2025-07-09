@@ -2,6 +2,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* Context for vectored I/O operations */
+struct xpdk_vectored_ctx {
+    struct xpdk_iovec *iov;
+    int iovcnt;
+    void *temp_buffer;
+    bool is_read;
+    xpdk_completion_callback_t original_callback;
+    void *original_ctx;
+};
+
 /* Forward declarations */
 static void xpdk_vectored_completion_callback(void *ctx, int status);
 

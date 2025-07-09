@@ -74,8 +74,9 @@ static void vectored_read_completion_cb(struct spdk_bdev_io *bdev_io, bool succe
     
     if (success) {
         msg->status = XPDK_SUCCESS;
-        msg->io.bytes_transferred = spdk_bdev_io_get_num_blocks(bdev_io) * 
-                                   spdk_bdev_get_block_size(spdk_bdev_io_get_bdev(bdev_io));
+        // Note: Use the original bytes_transferred from the request
+        // as SPDK API for getting transferred bytes from bdev_io is not available
+        msg->io.bytes_transferred = msg->io.len;
         
         /* Update performance statistics */
         struct xpdk_device *dev = xpdk_get_device(msg->io.fd);
@@ -120,8 +121,9 @@ static void vectored_write_completion_cb(struct spdk_bdev_io *bdev_io, bool succ
     
     if (success) {
         msg->status = XPDK_SUCCESS;
-        msg->io.bytes_transferred = spdk_bdev_io_get_num_blocks(bdev_io) * 
-                                   spdk_bdev_get_block_size(spdk_bdev_io_get_bdev(bdev_io));
+        // Note: Use the original bytes_transferred from the request
+        // as SPDK API for getting transferred bytes from bdev_io is not available
+        msg->io.bytes_transferred = msg->io.len;
         
         /* Update performance statistics */
         struct xpdk_device *dev = xpdk_get_device(msg->io.fd);
@@ -316,4 +318,154 @@ void xpdk_spdk_handle_writev_native(struct xpdk_msg *msg)
     
     /* For sync operations, completion will be handled by callback */
     /* For async operations, callback will be called by completion handler */
+}
+
+/* Public API functions for vectored I/O */
+
+/* High-performance vectored read operation (synchronous) */
+ssize_t xpdk_readv(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint64_t offset)
+{
+    if (!g_xpdk_ctx.initialized) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    if (iov == NULL || iovcnt <= 0 || iovcnt > 32) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    struct xpdk_msg msg;
+    xpdk_msg_init(&msg, XPDK_MSG_READV_NATIVE, fd);
+    msg.io.offset = offset;
+    msg.io.iov = (struct xpdk_iovec *)iov;
+    msg.io.iovcnt = iovcnt;
+    
+    /* Calculate total size */
+    size_t total_size = 0;
+    for (int i = 0; i < iovcnt; i++) {
+        total_size += iov[i].iov_len;
+    }
+    msg.io.len = total_size;
+    
+    /* Send to SPDK thread */
+    xpdk_send_msg(&msg);
+    
+    /* Wait for completion */
+    xpdk_msg_wait(&msg);
+    
+    if (msg.status == XPDK_SUCCESS) {
+        return msg.io.bytes_transferred;
+    } else {
+        return msg.status;
+    }
+}
+
+/* High-performance vectored write operation (synchronous) */
+ssize_t xpdk_writev(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint64_t offset)
+{
+    if (!g_xpdk_ctx.initialized) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    if (iov == NULL || iovcnt <= 0 || iovcnt > 32) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    struct xpdk_msg msg;
+    xpdk_msg_init(&msg, XPDK_MSG_WRITEV_NATIVE, fd);
+    msg.io.offset = offset;
+    msg.io.iov = (struct xpdk_iovec *)iov;
+    msg.io.iovcnt = iovcnt;
+    
+    /* Calculate total size */
+    size_t total_size = 0;
+    for (int i = 0; i < iovcnt; i++) {
+        total_size += iov[i].iov_len;
+    }
+    msg.io.len = total_size;
+    
+    /* Send to SPDK thread */
+    xpdk_send_msg(&msg);
+    
+    /* Wait for completion */
+    xpdk_msg_wait(&msg);
+    
+    if (msg.status == XPDK_SUCCESS) {
+        return msg.io.bytes_transferred;
+    } else {
+        return msg.status;
+    }
+}
+
+/* Asynchronous vectored read operation */
+int xpdk_readv_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint64_t offset,
+                     xpdk_io_callback_t callback, void *ctx)
+{
+    if (!g_xpdk_ctx.initialized) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    if (iov == NULL || iovcnt <= 0 || iovcnt > 32 || callback == NULL) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    struct xpdk_msg *msg = xpdk_msg_alloc();
+    if (!msg) {
+        return XPDK_ERROR_NOMEM;
+    }
+
+    xpdk_msg_init(msg, XPDK_MSG_READV_NATIVE, fd);
+    msg->io.offset = offset;
+    msg->io.iov = (struct xpdk_iovec *)iov;
+    msg->io.iovcnt = iovcnt;
+    msg->io.callback = callback;
+    msg->io.ctx = ctx;
+    
+    /* Calculate total size */
+    size_t total_size = 0;
+    for (int i = 0; i < iovcnt; i++) {
+        total_size += iov[i].iov_len;
+    }
+    msg->io.len = total_size;
+    
+    /* Send to SPDK thread */
+    xpdk_send_msg(msg);
+    
+    return XPDK_SUCCESS;
+}
+
+/* Asynchronous vectored write operation */
+int xpdk_writev_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, uint64_t offset,
+                      xpdk_io_callback_t callback, void *ctx)
+{
+    if (!g_xpdk_ctx.initialized) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    if (iov == NULL || iovcnt <= 0 || iovcnt > 32 || callback == NULL) {
+        return XPDK_ERROR_INVALID;
+    }
+
+    struct xpdk_msg *msg = xpdk_msg_alloc();
+    if (!msg) {
+        return XPDK_ERROR_NOMEM;
+    }
+
+    xpdk_msg_init(msg, XPDK_MSG_WRITEV_NATIVE, fd);
+    msg->io.offset = offset;
+    msg->io.iov = (struct xpdk_iovec *)iov;
+    msg->io.iovcnt = iovcnt;
+    msg->io.callback = callback;
+    msg->io.ctx = ctx;
+    
+    /* Calculate total size */
+    size_t total_size = 0;
+    for (int i = 0; i < iovcnt; i++) {
+        total_size += iov[i].iov_len;
+    }
+    msg->io.len = total_size;
+    
+    /* Send to SPDK thread */
+    xpdk_send_msg(msg);
+    
+    return XPDK_SUCCESS;
 }
