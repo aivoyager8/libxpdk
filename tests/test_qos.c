@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include "xpdk.h"
 #include <stdio.h>
 #include <stdlib.h>
