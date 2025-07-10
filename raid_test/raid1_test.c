@@ -45,8 +45,8 @@ static int verify_pattern(char *buffer, size_t size, uint32_t pattern, off_t off
 int main(int argc, char *argv[])
 {
     struct xpdk_opts opts;
-    struct xpdk_device_info devices[16];
-    size_t device_count = 16;
+    struct xpdk_bdev_info devices[16];
+    int device_count;
     xpdk_fd_t fd;
     char *write_buffer, *read_buffer;
     struct timeval start, end;
@@ -71,40 +71,40 @@ int main(int argc, char *argv[])
     }
     
     printf("扫描可用设备...\n");
-    ret = xpdk_list_devices(devices, &device_count);
-    if (ret != XPDK_SUCCESS) {
-        printf("Failed to list devices: %s\n", xpdk_strerror(ret));
+    device_count = xpdk_list_bdevs(devices, 16);
+    if (device_count < 0) {
+        printf("Failed to list devices: %s\n", xpdk_strerror(device_count));
         xpdk_cleanup();
         return 1;
     }
     
-    printf("发现 %zu 个设备:\n", device_count);
-    for (size_t i = 0; i < device_count; i++) {
-        printf("  [%zu] %s - 大小: %lu MB, 块大小: %u\n",
+    printf("发现 %d 个设备:\n", device_count);
+    for (int i = 0; i < device_count; i++) {
+        printf("  [%d] %s - 大小: %lu MB, 块大小: %lu\n",
                i, devices[i].name,
-               devices[i].size / (1024 * 1024),
+               devices[i].capacity / (1024 * 1024),
                devices[i].block_size);
     }
     
     /* 寻找RAID1设备 */
-    xpdk_fd_t raid_fd = -1;
-    for (size_t i = 0; i < device_count; i++) {
+    int raid_idx = -1;
+    for (int i = 0; i < device_count; i++) {
         if (strstr(devices[i].name, "Raid1") != NULL) {
-            raid_fd = i;
+            raid_idx = i;
             break;
         }
     }
     
-    if (raid_fd == -1) {
+    if (raid_idx == -1) {
         printf("未找到RAID1设备!\n");
         xpdk_cleanup();
         return 1;
     }
     
-    printf("\n使用RAID1设备: %s\n", devices[raid_fd].name);
+    printf("\n使用RAID1设备: %s\n", devices[raid_idx].name);
     
     /* 打开RAID1设备 */
-    fd = xpdk_open(devices[raid_fd].name, O_RDWR);
+    fd = xpdk_open(devices[raid_idx].name, O_RDWR);
     if (fd < 0) {
         printf("Failed to open RAID1 device: %s\n", xpdk_strerror(fd));
         xpdk_cleanup();
@@ -197,12 +197,12 @@ int main(int argc, char *argv[])
     
     /* 获取设备信息 */
     printf("\n4. 设备信息:\n");
-    struct xpdk_device_info info;
-    ret = xpdk_get_device_info(fd, &info);
+    struct xpdk_bdev_info info;
+    ret = xpdk_get_info(fd, &info);
     if (ret == XPDK_SUCCESS) {
         printf("  设备名: %s\n", info.name);
-        printf("  总大小: %lu MB\n", info.size / (1024 * 1024));
-        printf("  块大小: %u 字节\n", info.block_size);
+        printf("  总大小: %lu MB\n", info.capacity / (1024 * 1024));
+        printf("  块大小: %lu 字节\n", info.block_size);
     }
     
 cleanup:
