@@ -15,7 +15,7 @@ DPDK_LIBS = -lrte_eal -lrte_mempool -lrte_ring -lrte_mbuf -lrte_bus_pci \
             -lrte_pci -lrte_mempool_ring -lrte_telemetry
 
 # 系统库
-SYS_LIBS = -lpthread -lrt -luuid -lcrypto -lm -ldl -lnuma
+SYS_LIBS = -lpthread -lrt -luuid -lssl -lcrypto -lm -ldl -lnuma
 
 # libxpdk库
 XPDK_LIBS = -lxpdk
