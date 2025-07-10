@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "xpdk_internal.h"
 #include <string.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -242,16 +243,10 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
         return XPDK_ERROR_NOMEM;
     }
     
-    /* Create message pool */
+    /* Create message pool - using malloc temporarily due to mempool issues */
     uint32_t pool_size = opts->msg_pool_size > 0 ? opts->msg_pool_size : XPDK_DEFAULT_POOL_SIZE;
-    g_xpdk_ctx.msg_pool = spdk_mempool_create("xpdk_msg_pool", pool_size, 
-                                              sizeof(struct xpdk_msg), 64, 
-                                              SPDK_ENV_SOCKET_ID_ANY);
-    if (g_xpdk_ctx.msg_pool == NULL) {
-        printf("Failed to create message pool (size: %u)\n", pool_size);
-        spdk_ring_free(g_xpdk_ctx.msg_ring);
-        return XPDK_ERROR_NOMEM;
-    }
+    printf("Warning: Using malloc-based message allocation due to spdk_mempool issues\n");
+    g_xpdk_ctx.msg_pool = NULL;  /* Set to NULL to indicate malloc mode */
     
     printf("Created message ring (size: %u) and pool (size: %u)\n", ring_size, pool_size);
     
@@ -260,7 +255,6 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
                         xpdk_spdk_thread_main, NULL);
     if (rc != 0) {
         printf("Failed to create SPDK thread\n");
-        spdk_mempool_free(g_xpdk_ctx.msg_pool);
         spdk_ring_free(g_xpdk_ctx.msg_ring);
         return XPDK_ERROR_IO;
     }
@@ -440,7 +434,13 @@ xpdk_msg_alloc(enum xpdk_msg_type type)
 {
     struct xpdk_msg *msg;
     
-    msg = spdk_mempool_get(g_xpdk_ctx.msg_pool);
+    /* Use malloc mode if mempool is NULL */
+    if (g_xpdk_ctx.msg_pool == NULL) {
+        msg = malloc(sizeof(struct xpdk_msg));
+    } else {
+        msg = spdk_mempool_get(g_xpdk_ctx.msg_pool);
+    }
+    
     if (msg == NULL) {
         return NULL;
     }
@@ -458,7 +458,12 @@ void
 xpdk_msg_free(struct xpdk_msg *msg)
 {
     if (msg != NULL) {
-        spdk_mempool_put(g_xpdk_ctx.msg_pool, msg);
+        /* Use malloc mode if mempool is NULL */
+        if (g_xpdk_ctx.msg_pool == NULL) {
+            free(msg);
+        } else {
+            spdk_mempool_put(g_xpdk_ctx.msg_pool, msg);
+        }
     }
 }
 
