@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     opts.cpu_core = -1;             /* 不绑定CPU */
     opts.msg_ring_size = 64;        /* 最小环大小 */
     opts.msg_pool_size = 64;        /* 最小池大小 */
-    opts.config_file = "/home/libxpdk/raid_test/spdk_raid1.conf";
+    opts.config_file = NULL;        /* 不使用配置文件，使用默认配置 */
     
     printf("初始化libxpdk...\n");
     ret = xpdk_init_opts(&opts);
