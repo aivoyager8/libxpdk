@@ -128,9 +128,6 @@ struct xpdk_context {
     /* High-performance message queue using SPDK ring */
     struct spdk_ring *msg_ring;                        /* Lock-free message ring */
     
-    /* Memory pool for messages */
-    struct spdk_mempool *msg_pool;                     /* Pre-allocated message pool */
-    
     /* Event poller for processing messages */
     struct spdk_poller *msg_poller;                    /* Message processing poller */
     

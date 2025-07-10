@@ -1,5 +1,5 @@
-#define _GNU_SOURCE
-#include "xpdk_internal.h"
+#define _GNU_SOURCE#define XPDK_DEFAULT_RING_SIZE      512
+#define XPDK_DEFAULT_POLL_PERIOD_US 1000include "xpdk_internal.h"
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -171,14 +171,23 @@ xpdk_spdk_thread_main(void *arg)
     
     struct spdk_thread *thread;
     uint64_t poll_period_us;
+    int rc;
     
     /* Set CPU affinity if requested */
     xpdk_set_cpu_affinity(g_xpdk_ctx.opts.cpu_core);
+    
+    /* Initialize SPDK thread library in this thread */
+    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, 64);  /* Use small pool size */
+    if (rc < 0) {
+        printf("Failed to initialize SPDK thread library in worker thread\n");
+        return NULL;
+    }
     
     /* Allocate SPDK thread */
     thread = spdk_thread_create("xpdk_main", NULL);
     if (thread == NULL) {
         printf("Failed to create SPDK thread\n");
+        spdk_thread_lib_fini();
         return NULL;
     }
     
@@ -212,6 +221,7 @@ xpdk_spdk_thread_main(void *arg)
     /* Cleanup */
     spdk_poller_unregister(&g_xpdk_ctx.msg_poller);
     spdk_thread_exit(thread);
+    spdk_thread_lib_fini();  /* Cleanup thread library in same thread */
     
     printf("SPDK thread exited\n");
     return NULL;
@@ -236,16 +246,6 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
         return XPDK_ERROR_IO;
     }
     
-    /* Initialize SPDK thread library with message pool */
-    uint32_t pool_size = opts->msg_pool_size > 0 ? opts->msg_pool_size : XPDK_DEFAULT_POOL_SIZE;
-    /* Use smaller pool size to reduce memory pressure */
-    if (pool_size > 128) pool_size = 128;
-    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, pool_size);
-    if (rc < 0) {
-        printf("Failed to initialize SPDK thread library\n");
-        return XPDK_ERROR_IO;
-    }
-    
     /* Create message ring (lock-free queue) */
     uint32_t ring_size = opts->msg_ring_size > 0 ? opts->msg_ring_size : XPDK_DEFAULT_RING_SIZE;
     g_xpdk_ctx.msg_ring = spdk_ring_create(SPDK_RING_TYPE_MP_SC, ring_size, SPDK_ENV_SOCKET_ID_ANY);
@@ -254,11 +254,7 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
         return XPDK_ERROR_NOMEM;
     }
     
-    /* Create message pool - using malloc temporarily due to mempool issues */
-    printf("Warning: Using malloc-based message allocation due to spdk_mempool issues\n");
-    g_xpdk_ctx.msg_pool = NULL;  /* Set to NULL to indicate malloc mode */
-    
-    printf("Created message ring (size: %u) and pool (size: %u)\n", ring_size, pool_size);
+    printf("Created message ring (size: %u)\n", ring_size);
     
     /* Start SPDK thread */
     rc = pthread_create(&g_xpdk_ctx.spdk_thread_id, NULL, 
@@ -295,15 +291,9 @@ xpdk_cleanup_spdk_thread(void)
     /* Wait for SPDK thread to exit */
     pthread_join(g_xpdk_ctx.spdk_thread_id, NULL);
     
-    /* Cleanup SPDK thread library */
-    spdk_thread_lib_fini();
+    /* Note: spdk_thread_lib_fini() is called in the worker thread */
     
     /* Cleanup resources */
-    if (g_xpdk_ctx.msg_pool != NULL) {
-        spdk_mempool_free(g_xpdk_ctx.msg_pool);
-        g_xpdk_ctx.msg_pool = NULL;
-    }
-    
     if (g_xpdk_ctx.msg_ring != NULL) {
         spdk_ring_free(g_xpdk_ctx.msg_ring);
         g_xpdk_ctx.msg_ring = NULL;
@@ -322,7 +312,6 @@ xpdk_opts_init(struct xpdk_opts *opts)
     opts->turbo_mode = false;          /* Default: standard mode */
     opts->cpu_core = -1;               /* Default: no CPU binding */
     opts->msg_ring_size = 0;           /* Default: use XPDK_DEFAULT_RING_SIZE */
-    opts->msg_pool_size = 0;           /* Default: use XPDK_DEFAULT_POOL_SIZE */
     opts->poll_period_us = XPDK_DEFAULT_POLL_PERIOD_US; /* Default: 1ms polling */
 }
 
@@ -361,9 +350,6 @@ xpdk_init_opts(const struct xpdk_opts *opts)
     /* Set defaults for zero values */
     if (g_xpdk_ctx.opts.msg_ring_size == 0) {
         g_xpdk_ctx.opts.msg_ring_size = XPDK_DEFAULT_RING_SIZE;
-    }
-    if (g_xpdk_ctx.opts.msg_pool_size == 0) {
-        g_xpdk_ctx.opts.msg_pool_size = XPDK_DEFAULT_POOL_SIZE;
     }
     if (g_xpdk_ctx.opts.poll_period_us == 0 && !g_xpdk_ctx.opts.turbo_mode) {
         g_xpdk_ctx.opts.poll_period_us = XPDK_DEFAULT_POLL_PERIOD_US;
@@ -447,13 +433,8 @@ xpdk_msg_alloc(enum xpdk_msg_type type)
 {
     struct xpdk_msg *msg;
     
-    /* Use malloc mode if mempool is NULL */
-    if (g_xpdk_ctx.msg_pool == NULL) {
-        msg = malloc(sizeof(struct xpdk_msg));
-    } else {
-        msg = spdk_mempool_get(g_xpdk_ctx.msg_pool);
-    }
-    
+    /* Use standard malloc for message allocation */
+    msg = malloc(sizeof(struct xpdk_msg));
     if (msg == NULL) {
         return NULL;
     }
@@ -471,12 +452,7 @@ void
 xpdk_msg_free(struct xpdk_msg *msg)
 {
     if (msg != NULL) {
-        /* Use malloc mode if mempool is NULL */
-        if (g_xpdk_ctx.msg_pool == NULL) {
-            free(msg);
-        } else {
-            spdk_mempool_put(g_xpdk_ctx.msg_pool, msg);
-        }
+        free(msg);
     }
 }
 

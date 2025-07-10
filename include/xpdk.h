@@ -90,7 +90,6 @@ struct xpdk_opts {
     bool turbo_mode;                /* Enable turbo mode (high-performance polling) */
     int cpu_core;                   /* CPU core to bind SPDK thread (-1 for no binding) */
     uint32_t msg_ring_size;         /* Message ring size (0 for default) */
-    uint32_t msg_pool_size;         /* Message pool size (0 for default) */
     uint32_t poll_period_us;        /* Polling period in microseconds (0 for busy polling) */
 };
 

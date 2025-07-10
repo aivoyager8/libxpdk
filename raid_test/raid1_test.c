@@ -59,8 +59,7 @@ int main(int argc, char *argv[])
     xpdk_opts_init(&opts);
     opts.turbo_mode = false;        /* 使用标准模式 */
     opts.cpu_core = -1;             /* 不绑定CPU */
-    opts.msg_ring_size = 32;        /* 更小的环大小 */
-    opts.msg_pool_size = 32;        /* 更小的池大小 */
+    opts.msg_ring_size = 256;       /* 适中的环大小 */
     opts.config_file = NULL;        /* 不使用配置文件，使用默认配置 */
     
     printf("初始化libxpdk...\n");
