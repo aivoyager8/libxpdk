@@ -228,6 +228,7 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
     spdk_env_opts_init(&env_opts);
     env_opts.name = "xpdk";
     env_opts.shm_id = -1;
+    env_opts.mem_size = 512;  /* Allocate 512MB for SPDK */
     
     rc = spdk_env_init(&env_opts);
     if (rc < 0) {
@@ -237,6 +238,8 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
     
     /* Initialize SPDK thread library with message pool */
     uint32_t pool_size = opts->msg_pool_size > 0 ? opts->msg_pool_size : XPDK_DEFAULT_POOL_SIZE;
+    /* Use smaller pool size to reduce memory pressure */
+    if (pool_size > 128) pool_size = 128;
     rc = spdk_thread_lib_init_ext(NULL, NULL, 0, pool_size);
     if (rc < 0) {
         printf("Failed to initialize SPDK thread library\n");
