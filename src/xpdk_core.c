@@ -69,7 +69,6 @@ xpdk_print_performance_stats(void)
     printf("  Total Messages: %lu\n", g_xpdk_ctx.total_messages_processed);
     printf("  Total I/O Ops: %lu\n", g_xpdk_ctx.total_io_operations);
     printf("  Ring Size: %u\n", g_xpdk_ctx.opts.msg_ring_size);
-    printf("  Pool Size: %u\n", g_xpdk_ctx.opts.msg_pool_size);
     printf("  Poll Period: %u us\n", g_xpdk_ctx.opts.poll_period_us);
 }
 
