@@ -252,7 +252,6 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
     }
     
     /* Create message pool - using malloc temporarily due to mempool issues */
-    uint32_t pool_size = opts->msg_pool_size > 0 ? opts->msg_pool_size : XPDK_DEFAULT_POOL_SIZE;
     printf("Warning: Using malloc-based message allocation due to spdk_mempool issues\n");
     g_xpdk_ctx.msg_pool = NULL;  /* Set to NULL to indicate malloc mode */
     
