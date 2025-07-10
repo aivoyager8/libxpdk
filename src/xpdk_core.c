@@ -235,6 +235,14 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
         return XPDK_ERROR_IO;
     }
     
+    /* Initialize SPDK thread library with message pool */
+    uint32_t pool_size = opts->msg_pool_size > 0 ? opts->msg_pool_size : XPDK_DEFAULT_POOL_SIZE;
+    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, pool_size);
+    if (rc < 0) {
+        printf("Failed to initialize SPDK thread library\n");
+        return XPDK_ERROR_IO;
+    }
+    
     /* Create message ring (lock-free queue) */
     uint32_t ring_size = opts->msg_ring_size > 0 ? opts->msg_ring_size : XPDK_DEFAULT_RING_SIZE;
     g_xpdk_ctx.msg_ring = spdk_ring_create(SPDK_RING_TYPE_MP_SC, ring_size, SPDK_ENV_SOCKET_ID_ANY);
@@ -284,6 +292,9 @@ xpdk_cleanup_spdk_thread(void)
     
     /* Wait for SPDK thread to exit */
     pthread_join(g_xpdk_ctx.spdk_thread_id, NULL);
+    
+    /* Cleanup SPDK thread library */
+    spdk_thread_lib_fini();
     
     /* Cleanup resources */
     if (g_xpdk_ctx.msg_pool != NULL) {
