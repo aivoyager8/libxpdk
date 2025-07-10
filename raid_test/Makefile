@@ -64,6 +64,12 @@ debug: $(TARGET)
 release: CFLAGS += -DNDEBUG -O3
 release: $(TARGET)
 
+# 调试程序
+debug_memory: debug_memory.c
+	@echo "编译内存调试程序..."
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $< $(LIBS) $(SPDK_LIBS) $(DPDK_LIBS) $(SYS_LIBS)
+	@echo "编译完成: $@"
+
 help:
 	@echo "可用目标:"
 	@echo "  all     - 编译测试程序"
