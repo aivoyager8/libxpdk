@@ -197,8 +197,6 @@ int main() {
     xpdk_opts_init(&opts);
     opts.turbo_mode = true;
     opts.cpu_core = 1;          // Bind to CPU core 1
-    opts.msg_ring_size = 2048;  // Larger ring for better performance
-    opts.msg_pool_size = 2048;
     
     // Initialize with turbo mode
     if (xpdk_init_opts(&opts) != XPDK_SUCCESS) {

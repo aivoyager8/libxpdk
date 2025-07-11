@@ -13,7 +13,6 @@ int main()
     opts.turbo_mode = false;
     opts.cpu_core = -1;
     opts.msg_ring_size = 8;    /* 最小ring */
-    opts.msg_pool_size = 8;    /* 最小pool */
     opts.config_file = NULL;
     
     printf("正在初始化libxpdk（最小配置）...\n");

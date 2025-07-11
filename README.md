@@ -49,7 +49,6 @@ xpdk_opts_init(&opts);
 opts.turbo_mode = true;        // Enable turbo mode
 opts.cpu_core = 1;             // Bind to CPU core 1
 opts.msg_ring_size = 2048;     // Larger message ring
-opts.msg_pool_size = 2048;     // Larger message pool
 
 int rc = xpdk_init_opts(&opts);
 ```
@@ -209,7 +208,6 @@ struct xpdk_opts {
     bool turbo_mode;                  /* Enable turbo mode */
     int cpu_core;                     /* CPU core to bind to (-1 for no binding) */
     size_t msg_ring_size;             /* Message ring size */
-    size_t msg_pool_size;             /* Message pool size */
     bool enable_stats;                /* Enable performance statistics */
     uint32_t stats_interval_ms;       /* Statistics collection interval */
 };
@@ -313,7 +311,6 @@ int main() {
     opts.turbo_mode = true;        // Enable turbo mode
     opts.cpu_core = 1;             // Bind to CPU core 1
     opts.msg_ring_size = 2048;     // Larger buffers
-    opts.msg_pool_size = 2048;
     
     // Initialize with turbo mode
     if (xpdk_init_opts(&opts) != XPDK_SUCCESS) {

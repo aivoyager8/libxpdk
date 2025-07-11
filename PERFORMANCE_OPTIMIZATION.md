@@ -128,7 +128,6 @@ xpdk_opts_init(&opts);
 opts.turbo_mode = true;           // 启用高性能模式
 opts.cpu_core = 1;                // 绑定专用CPU核心
 opts.msg_ring_size = 4096;        // 增大消息环大小
-opts.msg_pool_size = 2048;        // 增大消息池大小
 opts.poll_period_us = 0;          // 忙轮询获得最低延迟
 ```
 

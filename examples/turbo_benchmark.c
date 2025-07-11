@@ -33,7 +33,6 @@ static void run_benchmark(const char *bdev_name, bool turbo_mode) {
     opts.turbo_mode = turbo_mode;
     opts.cpu_core = turbo_mode ? 1 : -1;  /* Bind to CPU 1 in turbo mode */
     opts.msg_ring_size = turbo_mode ? 2048 : 1024;
-    opts.msg_pool_size = turbo_mode ? 2048 : 1024;
     
     printf("Initializing XPDK...\n");
     rc = xpdk_init_opts(&opts);
