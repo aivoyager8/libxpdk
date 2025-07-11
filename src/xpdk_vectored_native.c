@@ -3,54 +3,19 @@
 #include <spdk/bdev.h>
 #include <stdlib.h>
 
-/* Pre-allocated iovec pool for high performance */
-static struct spdk_mempool *g_iovec_pool = NULL;
-
-/* Initialize iovec memory pool */
-int xpdk_iovec_pool_init(void)
-{
-    g_iovec_pool = spdk_mempool_create("xpdk_iovec_pool",
-                                       1024,  /* pool size */
-                                       sizeof(struct iovec) * 32,  /* max 32 iovecs */
-                                       SPDK_MEMPOOL_DEFAULT_CACHE_SIZE,
-                                       SPDK_ENV_SOCKET_ID_ANY);
-    return g_iovec_pool ? 0 : -1;
-}
-
-/* Cleanup iovec memory pool */
-void xpdk_iovec_pool_cleanup(void)
-{
-    if (g_iovec_pool) {
-        spdk_mempool_free(g_iovec_pool);
-        g_iovec_pool = NULL;
-    }
-}
-
-/* Allocate iovec from pool - high performance */
+/* Allocate iovec - always use malloc/free, no pool */
 struct iovec *xpdk_alloc_iovec(int count)
 {
     if (count <= 0 || count > 32) {
         return NULL;
     }
-    
-    if (g_iovec_pool) {
-        return spdk_mempool_get(g_iovec_pool);
-    }
-    
-    /* Fallback to malloc if pool not available */
     return malloc(sizeof(struct iovec) * count);
 }
 
-/* Free iovec to pool - high performance */
 void xpdk_free_iovec(struct iovec *iov)
 {
     if (!iov) return;
-    
-    if (g_iovec_pool) {
-        spdk_mempool_put(g_iovec_pool, iov);
-    } else {
-        free(iov);
-    }
+    free(iov);
 }
 
 /* Convert xpdk_iovec to spdk_iovec - optimized */
