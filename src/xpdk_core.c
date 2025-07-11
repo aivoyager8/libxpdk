@@ -235,30 +235,34 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
 
     rc = spdk_env_init(&env_opts);
     if (rc < 0) {
-        printf("Failed to initialize SPDK environment\n");
+        fprintf(stderr, "[XPDK-ERROR] Failed to initialize SPDK environment\n");
         return XPDK_ERROR_IO;
     }
 
-    // 只在主线程初始化线程库
-    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, 4096); // 官方推荐 pool_size=4096
-    if (rc < 0) {
-        printf("Failed to initialize SPDK thread library\n");
-        return XPDK_ERROR_IO;
+    // 只在主线程初始化线程库（防止多次初始化导致 mempool 冲突）
+    static int thread_lib_initialized = 0;
+    if (!thread_lib_initialized) {
+        rc = spdk_thread_lib_init_ext(NULL, NULL, 0, 4096); // 官方推荐 pool_size=4096
+        if (rc < 0) {
+            fprintf(stderr, "[XPDK-ERROR] Failed to initialize SPDK thread library: %d\n", rc);
+            return XPDK_ERROR_IO;
+        }
+        thread_lib_initialized = 1;
     }
 
     // 创建消息 ring（lock-free queue）
     uint32_t ring_size = opts->msg_ring_size > 0 ? opts->msg_ring_size : XPDK_DEFAULT_RING_SIZE;
     g_xpdk_ctx.msg_ring = spdk_ring_create(SPDK_RING_TYPE_MP_SC, ring_size, SPDK_ENV_SOCKET_ID_ANY);
     if (g_xpdk_ctx.msg_ring == NULL) {
-        printf("Failed to create message ring (size: %u)\n", ring_size);
+        fprintf(stderr, "[XPDK-ERROR] Failed to create message ring (size: %u)\n", ring_size);
         return XPDK_ERROR_NOMEM;
     }
-    printf("Created message ring (size: %u)\n", ring_size);
+    fprintf(stderr, "[XPDK-INFO] Created message ring (size: %u)\n", ring_size);
 
     // 启动SPDK worker线程（不再初始化线程库）
     rc = pthread_create(&g_xpdk_ctx.spdk_thread_id, NULL, xpdk_spdk_thread_main, NULL);
     if (rc != 0) {
-        printf("Failed to create SPDK thread\n");
+        fprintf(stderr, "[XPDK-ERROR] Failed to create SPDK thread\n");
         spdk_ring_free(g_xpdk_ctx.msg_ring);
         return XPDK_ERROR_IO;
     }
@@ -288,12 +292,17 @@ xpdk_cleanup_spdk_thread(void)
     /* Wait for SPDK thread to exit */
     pthread_join(g_xpdk_ctx.spdk_thread_id, NULL);
 
-    /* Note: spdk_thread_lib_fini() is called in the worker thread */
-
     /* Cleanup resources */
     if (g_xpdk_ctx.msg_ring != NULL) {
         spdk_ring_free(g_xpdk_ctx.msg_ring);
         g_xpdk_ctx.msg_ring = NULL;
+    }
+
+    // 只在主线程释放线程库
+    static int thread_lib_finalized = 0;
+    if (!thread_lib_finalized) {
+        spdk_thread_lib_fini();
+        thread_lib_finalized = 1;
     }
 }
 
