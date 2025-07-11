@@ -1,5 +1,5 @@
-#define _GNU_SOURCE#define XPDK_DEFAULT_RING_SIZE      512
-#define XPDK_DEFAULT_POLL_PERIOD_US 1000include "xpdk_internal.h"
+#define _GNU_SOURCE
+#include "xpdk_internal.h"
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -18,7 +18,6 @@ struct xpdk_context g_xpdk_ctx = {0};
 
 /* Default configuration values */
 #define XPDK_DEFAULT_RING_SIZE      1024
-#define XPDK_DEFAULT_POOL_SIZE      1024
 #define XPDK_DEFAULT_POLL_PERIOD_US 1000
 #define XPDK_TURBO_POLL_PERIOD_US   0      /* Busy polling */
 
