@@ -27,11 +27,9 @@ int main(void)
     
     /* Test invalid I/O operations */
     printf("Test 3: Invalid I/O operations... ");
-    char buffer[1024];
-    
     /* Try I/O on invalid fd */
-    assert(xpdk_read(-1, buffer, sizeof(buffer), 0) < 0);
-    assert(xpdk_write(-1, buffer, sizeof(buffer), 0) < 0);
+    assert(xpdk_read(-1, NULL, 1024, 0) < 0);
+    assert(xpdk_write(-1, NULL, 1024, 0) < 0);
     assert(xpdk_flush(-1) < 0);
     
     printf("PASS\n");
