@@ -68,6 +68,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${SPDK_INCLUDE_DIRS})
 include_directories(${UUID_INCLUDE_DIRS})
 
+# 自动修复：补充 SPDK 头文件和库路径，确保 spdk/app.h 可见
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/spdk/include/spdk/app.h")
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/spdk/include)
+    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/spdk/build/lib)
+endif()
+
 # Library source files - explicitly exclude SPDK subdirectory and non-native vectored implementation
 file(GLOB LIBXPDK_SOURCES 
     "src/xpdk_*.c"
