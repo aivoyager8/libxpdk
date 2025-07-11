@@ -31,7 +31,7 @@ static const char *error_strings[] = {
     "Out of memory",
     "I/O error",
     "Device busy",
-    "No such device",
+   
     "QoS error"
 };
 
@@ -178,8 +178,14 @@ xpdk_spdk_thread_main(void *arg)
     xpdk_set_cpu_affinity(g_xpdk_ctx.opts.cpu_core);
     
     /* Initialize SPDK thread library in this thread */
-    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, 64);  /* Use small pool size */
-    if (rc < 0) {
+    int pool_size = 16; // 调小测试
+    int cache_size = 8;
+    printf("[XPDK-DEBUG] spdk_thread_lib_init_ext params: pool_size=%d, cache_size=%d\n", pool_size, cache_size);
+    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, pool_size);
+    printf("[XPDK-DEBUG] spdk_thread_lib_init_ext rc=%d\n", rc);
+    extern struct spdk_mempool *spdk_msg_mempool;
+    printf("[XPDK-DEBUG] spdk_msg_mempool ptr=%p\n", spdk_msg_mempool);
+    if (rc < 0 || spdk_msg_mempool == NULL) {
         printf("Failed to initialize SPDK thread library in worker thread\n");
         return NULL;
     }
@@ -281,12 +287,6 @@ xpdk_cleanup_spdk_thread(void)
     if (!g_xpdk_ctx.spdk_thread_running) {
         return;
     }
-    
-    /* Send shutdown message */
-    struct xpdk_msg *msg = xpdk_msg_alloc(XPDK_MSG_SHUTDOWN);
-    if (msg != NULL) {
-        xpdk_msg_send_sync(msg);
-        xpdk_msg_free(msg);
     }
     
     /* Wait for SPDK thread to exit */
