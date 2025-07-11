@@ -287,13 +287,19 @@ xpdk_cleanup_spdk_thread(void)
     if (!g_xpdk_ctx.spdk_thread_running) {
         return;
     }
+
+    /* Send shutdown message */
+    struct xpdk_msg *msg = xpdk_msg_alloc(XPDK_MSG_SHUTDOWN);
+    if (msg != NULL) {
+        xpdk_msg_send_sync(msg);
+        xpdk_msg_free(msg);
     }
-    
+
     /* Wait for SPDK thread to exit */
     pthread_join(g_xpdk_ctx.spdk_thread_id, NULL);
-    
+
     /* Note: spdk_thread_lib_fini() is called in the worker thread */
-    
+
     /* Cleanup resources */
     if (g_xpdk_ctx.msg_ring != NULL) {
         spdk_ring_free(g_xpdk_ctx.msg_ring);
