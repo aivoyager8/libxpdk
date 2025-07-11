@@ -177,18 +177,10 @@ xpdk_spdk_thread_main(void *arg)
     /* Set CPU affinity if requested */
     xpdk_set_cpu_affinity(g_xpdk_ctx.opts.cpu_core);
     
-    /* Initialize SPDK thread library in this thread */
-    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, 16);
-    if (rc < 0) {
-        printf("Failed to initialize SPDK thread library in worker thread\n");
-        return NULL;
-    }
-    
     /* Allocate SPDK thread */
     thread = spdk_thread_create("xpdk_main", NULL);
     if (thread == NULL) {
         printf("Failed to create SPDK thread\n");
-        spdk_thread_lib_fini();
         return NULL;
     }
     
@@ -234,43 +226,47 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
 {
     struct spdk_env_opts env_opts;
     int rc;
-    
+
     /* Initialize SPDK environment */
     spdk_env_opts_init(&env_opts);
     env_opts.name = "xpdk";
     env_opts.shm_id = -1;
-    env_opts.mem_size = 512;
-    
+    env_opts.mem_size = 512;  /* Allocate 512MB for SPDK */
+
     rc = spdk_env_init(&env_opts);
     if (rc < 0) {
         printf("Failed to initialize SPDK environment\n");
         return XPDK_ERROR_IO;
     }
-    
-    /* Create message ring (lock-free queue) */
+
+    // 只在主线程初始化线程库
+    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, 4096); // 官方推荐 pool_size=4096
+    if (rc < 0) {
+        printf("Failed to initialize SPDK thread library\n");
+        return XPDK_ERROR_IO;
+    }
+
+    // 创建消息 ring（lock-free queue）
     uint32_t ring_size = opts->msg_ring_size > 0 ? opts->msg_ring_size : XPDK_DEFAULT_RING_SIZE;
     g_xpdk_ctx.msg_ring = spdk_ring_create(SPDK_RING_TYPE_MP_SC, ring_size, SPDK_ENV_SOCKET_ID_ANY);
     if (g_xpdk_ctx.msg_ring == NULL) {
         printf("Failed to create message ring (size: %u)\n", ring_size);
         return XPDK_ERROR_NOMEM;
     }
-    
     printf("Created message ring (size: %u)\n", ring_size);
-    
-    /* Start SPDK thread */
-    rc = pthread_create(&g_xpdk_ctx.spdk_thread_id, NULL, 
-                        xpdk_spdk_thread_main, NULL);
+
+    // 启动SPDK worker线程（不再初始化线程库）
+    rc = pthread_create(&g_xpdk_ctx.spdk_thread_id, NULL, xpdk_spdk_thread_main, NULL);
     if (rc != 0) {
         printf("Failed to create SPDK thread\n");
         spdk_ring_free(g_xpdk_ctx.msg_ring);
         return XPDK_ERROR_IO;
     }
-    
-    /* Wait for SPDK thread to be ready */
+
     while (!g_xpdk_ctx.spdk_thread_running) {
         usleep(1000);
     }
-    
+
     return XPDK_SUCCESS;
 }
 
