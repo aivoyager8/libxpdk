@@ -188,5 +188,6 @@ int xpdk_perf_stats_init(struct xpdk_device *dev);
 void xpdk_perf_stats_update(struct xpdk_device *dev, xpdk_io_type_t io_type, size_t bytes, uint64_t latency_us, bool success);
 struct iovec *xpdk_alloc_iovec(int count);
 void xpdk_free_iovec(struct iovec *iov);
+extern uint64_t xpdk_get_time_us(void);
 
 #endif /* XPDK_INTERNAL_H */

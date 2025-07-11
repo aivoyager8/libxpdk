@@ -13,6 +13,8 @@
 #include <spdk/thread.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
+#include <sys/time.h>
 // Note: spdk/ring.h is not available in this SPDK version
 // We'll implement ring functionality using other SPDK APIs
 
@@ -564,4 +566,16 @@ int xpdk_core_init(struct xpdk_opts *opts) {
     }
     
     return XPDK_SUCCESS;
+}
+
+uint64_t xpdk_get_time_us(void) {
+#ifdef __linux__
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000;
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint64_t)tv.tv_sec * 1000000 + tv.tv_usec;
+#endif
 }
