@@ -430,19 +430,12 @@ xpdk_cleanup(void)
 struct xpdk_msg *
 xpdk_msg_alloc(enum xpdk_msg_type type)
 {
-    struct xpdk_msg *msg;
-    
-    /* Use standard malloc for message allocation */
-    msg = malloc(sizeof(struct xpdk_msg));
-    if (msg == NULL) {
-        return NULL;
-    }
-    
+    struct xpdk_msg *msg = malloc(sizeof(struct xpdk_msg));
+    if (!msg) return NULL;
     memset(msg, 0, sizeof(*msg));
     msg->type = type;
     msg->completed = false;
     msg->status = XPDK_SUCCESS;
-    
     return msg;
 }
 
@@ -450,32 +443,22 @@ xpdk_msg_alloc(enum xpdk_msg_type type)
 void
 xpdk_msg_free(struct xpdk_msg *msg)
 {
-    if (msg != NULL) {
-        free(msg);
-    }
+    free(msg);
 }
 
 /* Send message synchronously */
 int
 xpdk_msg_send_sync(struct xpdk_msg *msg)
 {
-    size_t count;
-    
-    if (msg == NULL) {
-        return XPDK_ERROR_INVALID;
+    int rc = xpdk_msg_send(msg);
+    if (rc != XPDK_SUCCESS) {
+        return rc;
     }
-    
-    /* Enqueue message to ring */
-    count = spdk_ring_enqueue(g_xpdk_ctx.msg_ring, (void **)&msg, 1, NULL);
-    if (count != 1) {
-        return XPDK_ERROR_BUSY;
-    }
-    
-    /* Wait for completion using busy wait for maximum performance */
+    pthread_mutex_lock(&g_xpdk_ctx.sync_lock);
     while (!msg->completed) {
-        sched_yield(); /* Yield CPU but stay responsive */
+        pthread_cond_wait(&g_xpdk_ctx.sync_cond, &g_xpdk_ctx.sync_lock);
     }
-    
+    pthread_mutex_unlock(&g_xpdk_ctx.sync_lock);
     return msg->status;
 }
 
@@ -483,19 +466,17 @@ xpdk_msg_send_sync(struct xpdk_msg *msg)
 int
 xpdk_msg_send_async(struct xpdk_msg *msg)
 {
-    size_t count;
-    
+    return xpdk_msg_send(msg);
+}
+
+int
+xpdk_msg_send(struct xpdk_msg *msg)
+{
     if (msg == NULL) {
         return XPDK_ERROR_INVALID;
     }
-    
-    /* Enqueue message to ring */
-    count = spdk_ring_enqueue(g_xpdk_ctx.msg_ring, (void **)&msg, 1, NULL);
-    if (count != 1) {
-        return XPDK_ERROR_BUSY;
-    }
-    
-    return XPDK_SUCCESS;
+    size_t count = spdk_ring_enqueue(g_xpdk_ctx.msg_ring, (void **)&msg, 1, NULL);
+    return (count == 1) ? XPDK_SUCCESS : XPDK_ERROR_BUSY;
 }
 
 int
