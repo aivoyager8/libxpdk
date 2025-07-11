@@ -9,7 +9,10 @@
 #include <pthread.h>
 #include <spdk/env.h>
 #include <spdk/event.h>
+#include <spdk/log.h>
 #include <spdk/thread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 // Note: spdk/ring.h is not available in this SPDK version
 // We'll implement ring functionality using other SPDK APIs
 
@@ -524,4 +527,67 @@ xpdk_strerror(int error_code)
         return "Unknown error";
     }
     return error_strings[index];
+}
+
+/* Debug logging macro */
+#define XPDK_DEBUG_LOG(fmt, ...) \
+    fprintf(stderr, "[XPDK-DEBUG] " fmt "\n", ##__VA_ARGS__)
+
+int xpdk_core_init(struct xpdk_opts *opts) {
+    int rc;
+    size_t mem_avail;
+    XPDK_DEBUG_LOG("xpdk_core_init: begin");
+    
+    // 打印 hugepage 信息
+    FILE *f = fopen("/proc/meminfo", "r");
+    if (f) {
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            if (strstr(line, "HugePages_Total") || strstr(line, "HugePages_Free") || strstr(line, "Hugepagesize")) {
+                XPDK_DEBUG_LOG("%s", line);
+            }
+        }
+        fclose(f);
+    }
+    
+    mem_avail = spdk_env_get_mem_size();
+    XPDK_DEBUG_LOG("SPDK env available memory: %zu MB", mem_avail / (1024 * 1024));
+    
+    rc = spdk_env_init(NULL);
+    XPDK_DEBUG_LOG("spdk_env_init rc=%d", rc);
+    if (rc != 0) {
+        XPDK_DEBUG_LOG("spdk_env_init failed: %d", rc);
+        return rc;
+    }
+    
+    rc = spdk_thread_lib_init_ext(NULL, NULL, 0, SPDK_DEFAULT_MSG_MEMPOOL_SIZE);
+    XPDK_DEBUG_LOG("spdk_thread_lib_init_ext rc=%d", rc);
+    if (rc != 0) {
+        XPDK_DEBUG_LOG("spdk_thread_lib_init_ext failed: %d", rc);
+        return rc;
+    }
+    
+    // 打印 mempool 参数
+    size_t pool_size = 64; // 可根据实际参数调整
+    size_t obj_size = sizeof(struct xpdk_msg);
+    size_t cache_size = 64;
+    int numa_id = SPDK_ENV_SOCKET_ID_ANY;
+    XPDK_DEBUG_LOG("spdk_mempool_create params: pool_size=%zu, obj_size=%zu, cache_size=%zu, numa_id=%d", pool_size, obj_size, cache_size, numa_id);
+    struct spdk_mempool *mp = spdk_mempool_create("xpdk_msg_pool", pool_size, obj_size, cache_size, numa_id);
+    if (!mp) {
+        XPDK_DEBUG_LOG("spdk_mempool_create failed! errno=%d", errno);
+        return -ENOMEM;
+    }
+    XPDK_DEBUG_LOG("spdk_mempool_create success: %p", mp);
+    
+    // 打印 ring 创建参数
+    size_t ring_size = 1024;
+    struct spdk_ring *ring = spdk_ring_create(SPDK_RING_TYPE_MP_SC, ring_size, numa_id);
+    if (!ring) {
+        XPDK_DEBUG_LOG("spdk_ring_create failed!");
+        return -ENOMEM;
+    }
+    XPDK_DEBUG_LOG("spdk_ring_create success: %p", ring);
+    
+    return XPDK_SUCCESS;
 }
