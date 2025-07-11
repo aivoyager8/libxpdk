@@ -9,6 +9,7 @@
 #include <spdk/queue.h>
 #include <spdk/log.h>
 #include <spdk/util.h>
+#include <spdk/event.h> // 补充 event.h 以获得 spdk_app_start 定义
 
 /* Maximum number of open devices */
 #define XPDK_MAX_OPEN_DEVICES 256
