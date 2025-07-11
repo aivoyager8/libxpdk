@@ -567,7 +567,3 @@ int xpdk_core_init(struct xpdk_opts *opts) {
     
     return XPDK_SUCCESS;
 }
-
-uint64_t xpdk_get_time_us(void) {
-    return spdk_get_ticks() / (spdk_get_ticks_hz() / 1000000);
-}
