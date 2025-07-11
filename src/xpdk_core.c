@@ -220,8 +220,15 @@ xpdk_spdk_thread_main(void *arg)
     return NULL;
 }
 
+/* 所有底层和高级 init/cleanup 相关函数声明为 static，仅内部调用 */
+static int xpdk_init_spdk_thread(const struct xpdk_opts *opts);
+static void xpdk_cleanup_spdk_thread(void);
+static int xpdk_core_init(struct xpdk_opts *opts);
+static int xpdk_advanced_init_context(void);
+static void xpdk_advanced_cleanup_context(void);
+
 /* Initialize SPDK thread */
-int
+static int
 xpdk_init_spdk_thread(const struct xpdk_opts *opts)
 {
     struct spdk_env_opts env_opts;
@@ -275,7 +282,7 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
 }
 
 /* Cleanup SPDK thread */
-void
+static void
 xpdk_cleanup_spdk_thread(void)
 {
     if (!g_xpdk_ctx.spdk_thread_running) {
