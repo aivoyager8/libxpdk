@@ -156,11 +156,6 @@ int xpdk_find_free_fd(void);
 struct xpdk_device *xpdk_get_device(xpdk_fd_t fd);
 void xpdk_put_device(struct xpdk_device *dev);
 
-/* SPDK thread management */
-int xpdk_init_spdk_thread(const struct xpdk_opts *opts);
-void xpdk_cleanup_spdk_thread(void);
-void *xpdk_spdk_thread_main(void *arg);
-
 /* CPU affinity management */
 int xpdk_set_cpu_affinity(int cpu_core);
 void xpdk_print_performance_stats(void);
@@ -205,8 +200,5 @@ static inline uint64_t xpdk_get_time_us(void) {
 /* Memory management for high-performance operations */
 struct iovec *xpdk_alloc_iovec(int count);
 void xpdk_free_iovec(struct iovec *iov);
-
-/* Advanced open mechanism functions */
-void xpdk_advanced_cleanup(void);
 
 #endif /* XPDK_INTERNAL_H */
