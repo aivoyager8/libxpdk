@@ -182,22 +182,10 @@ void xpdk_spdk_handle_get_perf_stats(struct xpdk_msg *msg);
 void xpdk_spdk_handle_reset_perf_stats(struct xpdk_msg *msg);
 void xpdk_spdk_handle_trim(struct xpdk_msg *msg);
 void xpdk_spdk_handle_write_zeros(struct xpdk_msg *msg);
-
-/* High-performance native vectored I/O operations */
 void xpdk_spdk_handle_readv_native(struct xpdk_msg *msg);
 void xpdk_spdk_handle_writev_native(struct xpdk_msg *msg);
-
-/* Performance statistics functions */
 int xpdk_perf_stats_init(struct xpdk_device *dev);
-void xpdk_perf_stats_update(struct xpdk_device *dev, xpdk_io_type_t io_type, 
-                           size_t bytes, uint64_t latency_us, bool success);
-
-/* High-performance utility functions */
-static inline uint64_t xpdk_get_time_us(void) {
-    return spdk_get_ticks() / (spdk_get_ticks_hz() / 1000000);
-}
-
-/* Memory management for high-performance operations */
+void xpdk_perf_stats_update(struct xpdk_device *dev, xpdk_io_type_t io_type, size_t bytes, uint64_t latency_us, bool success);
 struct iovec *xpdk_alloc_iovec(int count);
 void xpdk_free_iovec(struct iovec *iov);
 
