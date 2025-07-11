@@ -7,7 +7,8 @@
 #include <spdk/bdev.h>
 #include <spdk/thread.h>
 #include <spdk/queue.h>
-#include <spdk/event.h>
+#include <spdk/log.h>
+#include <spdk/util.h>
 
 /* Maximum number of open devices */
 #define XPDK_MAX_OPEN_DEVICES 256
