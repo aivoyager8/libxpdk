@@ -11,7 +11,6 @@
 #include <spdk/event.h>
 #include <spdk/log.h>
 #include <spdk/thread.h>
-#include <spdk/app.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
