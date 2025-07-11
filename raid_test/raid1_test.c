@@ -44,6 +44,8 @@ static int verify_pattern(char *buffer, size_t size, uint32_t pattern, off_t off
 
 int main(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
     struct xpdk_opts opts;
     struct xpdk_bdev_info devices[16];
     int device_count;
@@ -52,6 +54,7 @@ int main(int argc, char *argv[])
     struct timeval start, end;
     double elapsed;
     int ret;
+    int errors = 0;
     
     printf("=== libxpdk SPDK RAID1 测试程序 ===\n");
     
@@ -159,7 +162,6 @@ int main(int argc, char *argv[])
     printf("3. 读取验证测试...\n");
     gettimeofday(&start, NULL);
     
-    int errors = 0;
     for (int i = 0; i < TEST_BLOCKS; i++) {
         off_t offset = i * TEST_BLOCK_SIZE;
         memset(read_buffer, 0, TEST_BLOCK_SIZE);
