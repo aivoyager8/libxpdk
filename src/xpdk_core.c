@@ -239,7 +239,7 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
     spdk_env_opts_init(&env_opts);
     env_opts.name = "xpdk";
     env_opts.shm_id = -1;
-    env_opts.mem_size = 512;  /* Allocate 512MB for SPDK */
+    env_opts.mem_size = 512;
     
     rc = spdk_env_init(&env_opts);
     if (rc < 0) {
