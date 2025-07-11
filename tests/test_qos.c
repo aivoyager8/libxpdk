@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-int main(int argc, char *argv[])
+int main(void)
 {
     struct xpdk_opts opts;
     struct xpdk_bdev_info devices[16];
