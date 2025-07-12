@@ -4,8 +4,6 @@ cmake_minimum_required(VERSION 3.15)
 find_library(XPDK_LIB xpdk PATHS ${CMAKE_BINARY_DIR} NO_DEFAULT_PATH)
 
 # Example programs
-add_executable(simple_example simple_example.c)
-target_link_libraries(simple_example xpdk ${ALL_LIBRARIES})
 
 add_executable(async_example async_example.c)
 target_link_libraries(async_example xpdk ${ALL_LIBRARIES})
@@ -29,6 +27,10 @@ target_link_libraries(vectored_example xpdk ${ALL_LIBRARIES})
 # add_executable(advanced_benchmark advanced_benchmark.c)
 # target_link_libraries(advanced_benchmark xpdk ${ALL_LIBRARIES})
 
+# Minimal SPDK app example
+add_executable(xpdk_spdk_init_example xpdk_spdk_init_example.c)
+target_link_libraries(xpdk_spdk_init_example xpdk ${ALL_LIBRARIES})
+
 # Advanced open example (if enabled)
 if(ENABLE_ADVANCED_OPEN)
     add_executable(advanced_open_example advanced_open_example.c)
@@ -38,10 +40,13 @@ if(ENABLE_ADVANCED_OPEN)
     install(TARGETS advanced_open_example
         RUNTIME DESTINATION bin/examples
     )
+    install(TARGETS xpdk_spdk_init_example
+        RUNTIME DESTINATION bin/examples
+    )
 endif()
 
 # Install examples
-install(TARGETS simple_example async_example list_devices turbo_example turbo_benchmark 
+install(TARGETS async_example list_devices turbo_example turbo_benchmark 
         qos_example vectored_example
     RUNTIME DESTINATION bin/examples
 )
