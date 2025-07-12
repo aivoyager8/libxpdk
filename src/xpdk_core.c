@@ -248,10 +248,14 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
     app_opts.name = "libxpdk";
     app_opts.reactor_mask = NULL;
     app_opts.json_config_file = opts && opts->config_file ? opts->config_file : NULL;
-    app_opts.mem_size = 0; // 默认自动
-    // app_opts.rpc_log_level = SPDK_LOG_INFO; // 如需设置日志等级可查阅 SPDK 文档
-    // 可根据 opts->cpu_core/hugepage/turbo_mode 等参数自适配
-    // ...其他参数适配...
+    app_opts.mem_size = 1024; // 设置为 1GB，确保 mempool 分配充足
+
+    // 启动前输出关键参数日志，便于排查
+    SPDK_NOTICELOG("[XPDK] SPDK app opts:\n");
+    SPDK_NOTICELOG("  name: %s\n", app_opts.name);
+    SPDK_NOTICELOG("  mem_size: %d MB\n", app_opts.mem_size);
+    SPDK_NOTICELOG("  json_config_file: %s\n", app_opts.json_config_file ? app_opts.json_config_file : "(null)");
+    SPDK_NOTICELOG("  reactor_mask: %s\n", app_opts.reactor_mask ? app_opts.reactor_mask : "(null)");
 
     // 统一用 spdk_app_start 启动 SPDK 环境和主线程
     int rc = spdk_app_start(&app_opts, xpdk_app_main, (void *)opts);
