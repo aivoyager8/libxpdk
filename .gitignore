@@ -48,3 +48,4 @@ core.*
 # OS specific
 .DS_Store
 Thumbs.db
+raid_test/disk1.img
