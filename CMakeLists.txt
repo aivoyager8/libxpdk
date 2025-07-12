@@ -27,6 +27,10 @@ pkg_check_modules(SPDK REQUIRED
     spdk_util
 )
 
+# 链接所有 SPDK 静态库，彻底解决依赖符号缺失问题
+file(GLOB ALL_SPDK_LIBS "/usr/local/lib/libspdk_*.a")
+list(APPEND SPDK_LIBRARIES ${ALL_SPDK_LIBS})
+
 # Find additional required libraries for SPDK
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(UUID REQUIRED uuid)
@@ -40,7 +44,40 @@ find_library(PTHREAD_LIB pthread)
 
 # Combine all libraries with proper order for static linking
 # Use --start-group/--end-group to resolve circular dependencies in static libraries
-set(ALL_LIBRARIES -Wl,--start-group ${SPDK_LIBRARIES} ${UUID_LIBRARIES} -Wl,--end-group)
+set(DPDK_LIBS
+    /usr/local/lib/librte_bus_pci.so
+    /usr/local/lib/librte_bus_vdev.so
+    /usr/local/lib/librte_cmdline.so
+    /usr/local/lib/librte_compressdev.so
+    /usr/local/lib/librte_cryptodev.so
+    /usr/local/lib/librte_dmadev.so
+    /usr/local/lib/librte_eal.so
+    /usr/local/lib/librte_ethdev.so
+    /usr/local/lib/librte_hash.so
+    /usr/local/lib/librte_kvargs.so
+    /usr/local/lib/librte_log.so
+    /usr/local/lib/librte_mbuf.so
+    /usr/local/lib/librte_mempool.so
+    /usr/local/lib/librte_mempool_ring.so
+    /usr/local/lib/librte_meter.so
+    /usr/local/lib/librte_net.so
+    /usr/local/lib/librte_pci.so
+    /usr/local/lib/librte_power.so
+    /usr/local/lib/librte_power_acpi.so
+    /usr/local/lib/librte_power_amd_pstate.so
+    /usr/local/lib/librte_power_cppc.so
+    /usr/local/lib/librte_power_intel_pstate.so
+    /usr/local/lib/librte_power_intel_uncore.so
+    /usr/local/lib/librte_power_kvm_vm.so
+    /usr/local/lib/librte_rcu.so
+    /usr/local/lib/librte_reorder.so
+    /usr/local/lib/librte_ring.so
+    /usr/local/lib/librte_security.so
+    /usr/local/lib/librte_telemetry.so
+    /usr/local/lib/librte_timer.so
+    /usr/local/lib/librte_vhost.so
+)
+set(ALL_LIBRARIES -Wl,--start-group ${SPDK_LIBRARIES} ${UUID_LIBRARIES} ${DPDK_LIBS} -Wl,--end-group)
 if(SSL_LIB)
     list(APPEND ALL_LIBRARIES ${SSL_LIB})
 endif()
@@ -69,9 +106,20 @@ include_directories(${SPDK_INCLUDE_DIRS})
 include_directories(${UUID_INCLUDE_DIRS})
 
 # 自动修复：补充 SPDK 头文件和库路径，确保 spdk/app.h 可见
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/spdk/include/spdk/app.h")
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/spdk/include)
-    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/spdk/build/lib)
+find_path(SPDK_APP_INCLUDE_DIR spdk/app.h
+    HINTS ${SPDK_INCLUDE_DIRS}
+    PATHS /usr/local/include /usr/include
+)
+if(SPDK_APP_INCLUDE_DIR)
+    include_directories(${SPDK_APP_INCLUDE_DIR})
+endif()
+
+find_library(SPDK_APP_LIB spdk_app
+    HINTS ${SPDK_LIBRARY_DIRS}
+    PATHS /usr/local/lib /usr/lib
+)
+if(SPDK_APP_LIB)
+    list(APPEND SPDK_LIBRARIES ${SPDK_APP_LIB})
 endif()
 
 # Library source files - explicitly exclude SPDK subdirectory and non-native vectored implementation

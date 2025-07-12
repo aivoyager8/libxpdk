@@ -11,6 +11,7 @@
 #include <spdk/event.h>
 #include <spdk/log.h>
 #include <spdk/thread.h>
+// #include <spdk/app.h> // 新版 SPDK 已无此头文件，相关 API 直接由 event.h 提供
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -229,11 +230,13 @@ static int xpdk_core_init(struct xpdk_opts *opts);
 static int xpdk_advanced_init_context(void);
 static void xpdk_advanced_cleanup_context(void);
 
-static int xpdk_app_main(void *arg) {
+static void xpdk_app_main(void *arg) {
     // 这里实现原有设备发现、队列初始化等主流程
     // arg 可为 xpdk_opts 或 NULL
     // ...原有初始化逻辑...
-    return 0;
+    (void)arg;
+    // TODO: 设备发现、队列初始化等
+    return;
 }
 
 /* Initialize SPDK thread */
@@ -244,9 +247,9 @@ xpdk_init_spdk_thread(const struct xpdk_opts *opts)
     spdk_app_opts_init(&app_opts, sizeof(app_opts));
     app_opts.name = "libxpdk";
     app_opts.reactor_mask = NULL;
-    app_opts.config_file = opts && opts->config_file ? opts->config_file : NULL;
+    app_opts.json_config_file = opts && opts->config_file ? opts->config_file : NULL;
     app_opts.mem_size = 0; // 默认自动
-    app_opts.log_level = SPDK_LOG_INFO;
+    // app_opts.rpc_log_level = SPDK_LOG_INFO; // 如需设置日志等级可查阅 SPDK 文档
     // 可根据 opts->cpu_core/hugepage/turbo_mode 等参数自适配
     // ...其他参数适配...
 
@@ -326,9 +329,9 @@ xpdk_init_opts(const struct xpdk_opts *opts)
     spdk_app_opts_init(&app_opts, sizeof(app_opts));
     app_opts.name = "libxpdk";
     app_opts.reactor_mask = NULL;
-    app_opts.config_file = opts && opts->config_file ? opts->config_file : NULL;
+    app_opts.json_config_file = opts && opts->config_file ? opts->config_file : NULL;
     app_opts.mem_size = 0; // 默认自动
-    app_opts.log_level = SPDK_LOG_INFO;
+    // app_opts.rpc_log_level = SPDK_LOG_INFO; // 如需设置日志等级可查阅 SPDK 文档
     // 可根据 opts->cpu_core/hugepage/turbo_mode 等参数自适配
     // ...其他参数适配...
 
