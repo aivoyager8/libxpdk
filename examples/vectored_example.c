@@ -7,6 +7,9 @@
 
 int main(int argc, char *argv[])
 {
+    (void)argc; /* unused parameter */
+    (void)argv; /* unused parameter */
+    
     struct xpdk_opts opts;
     struct xpdk_bdev_info devices[16];
     xpdk_fd_t fd;
@@ -139,15 +142,16 @@ int main(int argc, char *argv[])
     
     /* Test buffer allocation */
     printf("\n=== Buffer Allocation Test ===\n");
-    void *aligned_buffer = xpdk_alloc_buffer(8192, 4096);
-    if (aligned_buffer) {
+    void *aligned_buffer = NULL;
+    int alloc_rc = posix_memalign(&aligned_buffer, 4096, 8192);
+    if (alloc_rc == 0 && aligned_buffer) {
         printf("Successfully allocated 8KB aligned buffer\n");
         
         /* Test the buffer */
         memset(aligned_buffer, 0xAA, 8192);
         printf("Buffer test: filled with pattern\n");
         
-        xpdk_free_buffer(aligned_buffer);
+        free(aligned_buffer);
         printf("Buffer freed successfully\n");
     } else {
         printf("Failed to allocate aligned buffer\n");

@@ -1,0 +1,3 @@
+[submodule "src/spdk"]
+	path = src/spdk
+	url  = https://gitee.com/cdevel/spdk

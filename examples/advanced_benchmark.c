@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
     opts.cpu_core = cpu_core;
     if (turbo_mode) {
         opts.msg_ring_size = 2048;
-        opts.msg_pool_size = 2048;
+        // msg_pool_size 已废弃，无需设置
     }
     
     int rc = xpdk_init_opts(&opts);

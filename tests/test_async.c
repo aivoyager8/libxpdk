@@ -53,10 +53,9 @@ int main(void)
     
     /* Test polling */
     printf("Test 4: Polling function... ");
-    int poll_result = xpdk_poll(10);
-    assert(poll_result >= 0);  /* Should not fail even if no I/O pending */
+    xpdk_poll(10); /* 直接调用，无需保存返回值 */
+    assert(xpdk_poll(10) >= 0);  /* Should not fail even if no I/O pending */
     printf("PASS\n");
-    
     /* Cleanup */
     printf("Test 5: Cleanup... ");
     xpdk_cleanup();

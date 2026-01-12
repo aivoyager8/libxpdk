@@ -7,7 +7,8 @@
 #include <spdk/bdev.h>
 #include <spdk/thread.h>
 #include <spdk/queue.h>
-#include <spdk/event.h>
+#include <spdk/log.h>
+#include <spdk/util.h>
 
 /* Maximum number of open devices */
 #define XPDK_MAX_OPEN_DEVICES 256
@@ -18,9 +19,8 @@ enum xpdk_msg_type {
     XPDK_MSG_CLOSE,
     XPDK_MSG_READ,
     XPDK_MSG_WRITE,
-    XPDK_MSG_READV,
-    XPDK_MSG_WRITEV,
-    XPDK_MSG_BATCH_SUBMIT,
+    XPDK_MSG_READV_NATIVE,      /* Native vectored read */
+    XPDK_MSG_WRITEV_NATIVE,     /* Native vectored write */
     XPDK_MSG_FLUSH,
     XPDK_MSG_LIST_BDEVS,
     XPDK_MSG_GET_INFO,
@@ -56,12 +56,13 @@ struct xpdk_msg {
         
         struct {
             int fd;
-            void *buffer;
-            size_t count;
+            void *buffer;              /* For regular IO: buffer pointer; For vectored: iovec array */
+            size_t count;              /* For regular IO: byte count; For vectored: iovec count */
             uint64_t offset;
             ssize_t bytes_transferred;
             xpdk_io_callback_t callback;  /* For async operations */
             void *user_ctx;               /* User callback context */
+            void *spdk_ctx;               /* SPDK-specific context (e.g., converted iovec) */
         } io;
         
         struct {
@@ -90,12 +91,6 @@ struct xpdk_msg {
             uint64_t offset;
             uint64_t length;
         } trim;
-        
-        struct {
-            struct xpdk_batch_io *ios;
-            int count;
-            xpdk_io_callback_t callback;
-        } batch;
     };
     
     TAILQ_ENTRY(xpdk_msg) link;
@@ -134,9 +129,6 @@ struct xpdk_context {
     /* High-performance message queue using SPDK ring */
     struct spdk_ring *msg_ring;                        /* Lock-free message ring */
     
-    /* Memory pool for messages */
-    struct spdk_mempool *msg_pool;                     /* Pre-allocated message pool */
-    
     /* Event poller for processing messages */
     struct spdk_poller *msg_poller;                    /* Message processing poller */
     
@@ -152,25 +144,18 @@ struct xpdk_context {
 /* Global context instance */
 extern struct xpdk_context g_xpdk_ctx;
 
-/* Vectored I/O context for async operations */
-struct xpdk_vectored_ctx {
-    xpdk_io_callback_t original_callback;
-    void *original_ctx;
-    const struct xpdk_iovec *iov;
-    int iovcnt;
-    void *temp_buffer;
-    bool is_read;
+/* High-performance async IO context for vectored operations */
+struct xpdk_vectored_async_ctx {
+    struct xpdk_msg *msg;           /* Original message */
+    struct iovec *spdk_iov;         /* Converted SPDK iovec */
+    int iovcnt;                     /* Number of vectors */
+    uint64_t start_time;            /* For latency measurement */
 };
 
 /* Internal helper functions */
 int xpdk_find_free_fd(void);
 struct xpdk_device *xpdk_get_device(xpdk_fd_t fd);
 void xpdk_put_device(struct xpdk_device *dev);
-
-/* SPDK thread management */
-int xpdk_init_spdk_thread(const struct xpdk_opts *opts);
-void xpdk_cleanup_spdk_thread(void);
-void *xpdk_spdk_thread_main(void *arg);
 
 /* CPU affinity management */
 int xpdk_set_cpu_affinity(int cpu_core);
@@ -189,8 +174,6 @@ void xpdk_spdk_handle_open(struct xpdk_msg *msg);
 void xpdk_spdk_handle_close(struct xpdk_msg *msg);
 void xpdk_spdk_handle_read(struct xpdk_msg *msg);
 void xpdk_spdk_handle_write(struct xpdk_msg *msg);
-void xpdk_spdk_handle_readv(struct xpdk_msg *msg);
-void xpdk_spdk_handle_writev(struct xpdk_msg *msg);
 void xpdk_spdk_handle_flush(struct xpdk_msg *msg);
 void xpdk_spdk_handle_list_bdevs(struct xpdk_msg *msg);
 void xpdk_spdk_handle_get_info(struct xpdk_msg *msg);
@@ -200,15 +183,14 @@ void xpdk_spdk_handle_get_perf_stats(struct xpdk_msg *msg);
 void xpdk_spdk_handle_reset_perf_stats(struct xpdk_msg *msg);
 void xpdk_spdk_handle_trim(struct xpdk_msg *msg);
 void xpdk_spdk_handle_write_zeros(struct xpdk_msg *msg);
-void xpdk_spdk_handle_batch_submit(struct xpdk_msg *msg);
-void xpdk_spdk_handle_shutdown(struct xpdk_msg *msg);
-
-/* Performance statistics functions */
+void xpdk_spdk_handle_readv_native(struct xpdk_msg *msg);
+void xpdk_spdk_handle_writev_native(struct xpdk_msg *msg);
 int xpdk_perf_stats_init(struct xpdk_device *dev);
-void xpdk_perf_stats_update(struct xpdk_device *dev, xpdk_io_type_t io_type, 
-                           size_t bytes, uint64_t latency_us, bool success);
-
-/* Vectored I/O functions */
-static void xpdk_vectored_completion_callback(void *ctx, int status);
+void xpdk_perf_stats_update(struct xpdk_device *dev, xpdk_io_type_t io_type, size_t bytes, uint64_t latency_us, bool success);
+struct iovec *xpdk_alloc_iovec(int count);
+void xpdk_free_iovec(struct iovec *iov);
+static inline uint64_t xpdk_get_time_us(void) {
+    return spdk_get_ticks() / (spdk_get_ticks_hz() / 1000000);
+}
 
 #endif /* XPDK_INTERNAL_H */

@@ -3,7 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <pthread.h> // For pthread_mutex_t, pthread_cond_t
+#include <stdbool.h>
+#include <sys/uio.h>  /* For struct iovec */
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,15 +14,8 @@ extern "C" {
 #define XPDK_SUCCESS         0
 #define XPDK_ERROR_INVALID  -1
 #define XPDK_ERROR_NOMEM    -2
-#define XPDK_ERROR_IO       -/**
- * Submit a batch of I/O operations
- * @param ctx Batch context
- * @param ios Array of batch I/O operations
- * @param count Number of operations in array
- * @param callback Callback function called for each completed operation
- * @return XPDK_SUCCESS on success, negative error code on failure
- */
-int xpdk_batch_submit(struct xpdk_batch_ctx *ctx, struct xpdk_batch_io *ios, int count, xpdk_io_callback_t callback);ne XPDK_ERROR_BUSY     -4
+#define XPDK_ERROR_IO       -3
+#define XPDK_ERROR_BUSY     -4
 #define XPDK_ERROR_NODEV    -5
 #define XPDK_ERROR_QOS      -6
 
@@ -77,30 +71,6 @@ struct xpdk_perf_stats {
     uint64_t errors;                /* Total error count */
 };
 
-/* Batch I/O operation structure */
-struct xpdk_batch_io {
-    xpdk_io_type_t type;    /* I/O operation type */
-    xpdk_fd_t fd;           /* File descriptor */
-    void *buffer;           /* Buffer for I/O */
-    size_t count;           /* Number of bytes */
-    uint64_t offset;        /* Offset in device */
-    void *user_ctx;         /* User context */
-    int status;             /* Operation status (for completion) */
-    size_t bytes_transferred; /* Bytes actually transferred */
-};
-
-/* Batch I/O context structure */
-struct xpdk_batch_ctx {
-    int max_ios;            /* Maximum I/O operations in flight */
-    int pending_ios;        /* Current pending I/O operations */
-    int completed_ios;      /* Completed I/O operations ready for processing */
-    struct xpdk_batch_io *pending_queue;    /* Queue of pending I/O operations */
-    struct xpdk_batch_io *completed_queue;  /* Queue of completed I/O operations */
-    xpdk_io_callback_t global_callback;     /* Global completion callback */
-    pthread_mutex_t lock;   /* Thread safety lock */
-    pthread_cond_t completion_cond;  /* Completion condition variable */
-};
-
 /* Async I/O callback function */
 typedef void (*xpdk_io_callback_t)(void *ctx, int status);
 
@@ -120,7 +90,6 @@ struct xpdk_opts {
     bool turbo_mode;                /* Enable turbo mode (high-performance polling) */
     int cpu_core;                   /* CPU core to bind SPDK thread (-1 for no binding) */
     uint32_t msg_ring_size;         /* Message ring size (0 for default) */
-    uint32_t msg_pool_size;         /* Message pool size (0 for default) */
     uint32_t poll_period_us;        /* Polling period in microseconds (0 for busy polling) */
 };
 
@@ -212,7 +181,7 @@ int xpdk_get_info(xpdk_fd_t fd, struct xpdk_bdev_info *info);
  * @param fd File descriptor
  * @param buffer Buffer to store read data
  * @param count Number of bytes to read
- * @param offset Offset in bytes from beginning of device
+ * @param offset Offset in bytes from
  * @param callback Callback function to call when operation completes
  * @param ctx User context passed to callback
  * @return XPDK_SUCCESS on success, negative error code on failure
@@ -333,51 +302,37 @@ int xpdk_writev_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, ui
                       xpdk_io_callback_t callback, void *ctx);
 
 /**
- * Submit batch I/O operations
- * @param ios Array of batch I/O operations
- * @param count Number of operations in array
- * @param callback Callback function called for each completed operation
+ * Trim (discard) data on device (similar to TRIM/UNMAP)
+ * @param fd File descriptor
+ * @param offset Offset in bytes from beginning of device
+ * @param length Length in bytes to trim
  * @return XPDK_SUCCESS on success, negative error code on failure
  */
-int xpdk_batch_submit(struct xpdk_batch_io *ios, int count, xpdk_io_callback_t callback);
+int xpdk_trim(xpdk_fd_t fd, uint64_t offset, uint64_t length);
 
 /**
- * Wait for batch I/O completions
- * @param max_completions Maximum number of completions to wait for
- * @param timeout_ms Timeout in milliseconds (0 = no timeout)
- * @return Number of completions processed, negative error code on failure
+ * Write zeros to device
+ * @param fd File descriptor
+ * @param offset Offset in bytes from beginning of device
+ * @param length Length in bytes to zero
+ * @return XPDK_SUCCESS on success, negative error code on failure
  */
-int xpdk_batch_wait(int max_completions, int timeout_ms);
+int xpdk_write_zeros(xpdk_fd_t fd, uint64_t offset, uint64_t length);
 
 /**
- * Initialize a batch I/O context
- * @param max_ios Maximum number of I/O operations in flight
- * @return Batch context pointer on success, NULL on failure
+ * Get performance statistics for a device
+ * @param fd File descriptor
+ * @param stats Pointer to structure to store performance statistics
+ * @return XPDK_SUCCESS on success, negative error code on failure
  */
-struct xpdk_batch_ctx *xpdk_batch_init(int max_ios);
+int xpdk_get_perf_stats(xpdk_fd_t fd, struct xpdk_perf_stats *stats);
 
 /**
- * Cleanup a batch I/O context
- * @param ctx Batch context to cleanup
+ * Reset performance statistics for a device
+ * @param fd File descriptor
+ * @return XPDK_SUCCESS on success, negative error code on failure
  */
-void xpdk_batch_cleanup(struct xpdk_batch_ctx *ctx);
-
-/**
- * Submit a single I/O to batch context (non-blocking)
- * @param ctx Batch context
- * @param io I/O operation to submit
- * @return XPDK_SUCCESS on success, XPDK_ERROR_BUSY if queue full, negative error on failure
- */
-int xpdk_batch_submit_one(struct xpdk_batch_ctx *ctx, const struct xpdk_batch_io *io);
-
-/**
- * Process completions from batch context
- * @param ctx Batch context
- * @param max_completions Maximum completions to process
- * @return Number of completions processed, negative error on failure
- */
-int xpdk_batch_process_completions(struct xpdk_batch_ctx *ctx, int max_completions);
-
+int xpdk_reset_perf_stats(xpdk_fd_t fd);
 
 
 #ifdef __cplusplus

@@ -49,7 +49,6 @@ xpdk_opts_init(&opts);
 opts.turbo_mode = true;        // Enable turbo mode
 opts.cpu_core = 1;             // Bind to CPU core 1
 opts.msg_ring_size = 2048;     // Larger message ring
-opts.msg_pool_size = 2048;     // Larger message pool
 
 int rc = xpdk_init_opts(&opts);
 ```
@@ -58,7 +57,7 @@ int rc = xpdk_init_opts(&opts);
 - **Busy Polling**: Zero-latency message processing
 - **CPU Binding**: Dedicated CPU core for consistent performance
 - **Larger Buffers**: Increased ring and pool sizes
-- **Batch Processing**: Process multiple messages per poll cycle
+- **Message Processing**: Process multiple messages per poll cycle
 
 **When to Use Turbo Mode:**
 - ✅ Latency-sensitive applications
@@ -98,13 +97,6 @@ int xpdk_writev_async(xpdk_fd_t fd, const struct xpdk_iovec *iov, int iovcnt, ui
 // Advanced I/O operations
 int xpdk_trim(xpdk_fd_t fd, uint64_t offset, uint64_t length);
 int xpdk_write_zeros(xpdk_fd_t fd, uint64_t offset, uint64_t length);
-
-// Batch I/O operations
-struct xpdk_batch_ctx *xpdk_batch_init(int max_ios);
-void xpdk_batch_cleanup(struct xpdk_batch_ctx *ctx);
-int xpdk_batch_submit(struct xpdk_batch_ctx *ctx, struct xpdk_batch_io *ios, int count,
-                      xpdk_io_callback_t callback);
-int xpdk_batch_submit_one(struct xpdk_batch_ctx *ctx, const struct xpdk_batch_io *io);
 
 // Buffer management
 void *xpdk_alloc_buffer(size_t size);
@@ -216,7 +208,6 @@ struct xpdk_opts {
     bool turbo_mode;                  /* Enable turbo mode */
     int cpu_core;                     /* CPU core to bind to (-1 for no binding) */
     size_t msg_ring_size;             /* Message ring size */
-    size_t msg_pool_size;             /* Message pool size */
     bool enable_stats;                /* Enable performance statistics */
     uint32_t stats_interval_ms;       /* Statistics collection interval */
 };
@@ -320,7 +311,6 @@ int main() {
     opts.turbo_mode = true;        // Enable turbo mode
     opts.cpu_core = 1;             // Bind to CPU core 1
     opts.msg_ring_size = 2048;     // Larger buffers
-    opts.msg_pool_size = 2048;
     
     // Initialize with turbo mode
     if (xpdk_init_opts(&opts) != XPDK_SUCCESS) {

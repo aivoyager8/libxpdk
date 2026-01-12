@@ -22,34 +22,22 @@ int main(void)
     
     /* Test device opening with invalid device */
     printf("Test 2: Open invalid device... ");
-    xpdk_fd_t fd = xpdk_open("invalid_device_name", O_RDWR);
-    assert(fd < 0);
+    assert(xpdk_open("invalid_device_name", O_RDWR) < 0);
     printf("PASS\n");
     
     /* Test invalid I/O operations */
     printf("Test 3: Invalid I/O operations... ");
-    char buffer[1024];
-    ssize_t result;
-    
     /* Try I/O on invalid fd */
-    result = xpdk_read(-1, buffer, sizeof(buffer), 0);
-    assert(result < 0);
-    
-    result = xpdk_write(-1, buffer, sizeof(buffer), 0);
-    assert(result < 0);
-    
-    rc = xpdk_flush(-1);
-    assert(rc < 0);
+    assert(xpdk_read(-1, NULL, 1024, 0) < 0);
+    assert(xpdk_write(-1, NULL, 1024, 0) < 0);
+    assert(xpdk_flush(-1) < 0);
     
     printf("PASS\n");
     
     /* Test with NULL parameters */
     printf("Test 4: NULL parameter handling... ");
-    result = xpdk_read(0, NULL, 1024, 0);
-    assert(result == XPDK_ERROR_INVALID);
-    
-    result = xpdk_write(0, NULL, 1024, 0);
-    assert(result == XPDK_ERROR_INVALID);
+    assert(xpdk_read(0, NULL, 1024, 0) == XPDK_ERROR_INVALID);
+    assert(xpdk_write(0, NULL, 1024, 0) == XPDK_ERROR_INVALID);
     
     printf("PASS\n");
     

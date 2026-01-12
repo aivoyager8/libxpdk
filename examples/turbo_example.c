@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
     /* In turbo mode, use larger buffers for better performance */
     if (use_turbo) {
         opts.msg_ring_size = 2048;
-        opts.msg_pool_size = 2048;
         opts.poll_period_us = 0;  /* Busy polling */
     }
     
